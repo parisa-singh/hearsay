@@ -8,7 +8,6 @@ import { youtubeHandler } from './routes/youtube.js'
 import { tripadvisorHandler } from './routes/tripadvisor.js'
 import { facebookHandler } from './routes/facebook.js'
 import { trustpilotHandler } from './routes/trustpilot.js'
-import { synthesizeHandler } from './routes/synthesize.js'
 
 const router = Router()
 
@@ -23,9 +22,6 @@ router.get('/youtube', youtubeHandler)
 router.get('/tripadvisor', tripadvisorHandler)
 router.get('/facebook', facebookHandler)
 router.get('/trustpilot', trustpilotHandler)
-
-// AI synthesis
-router.post('/synthesize', synthesizeHandler)
 
 // Health check
 router.get('/', () => Response.json({ status: 'ok', service: 'hearsay-api' }))
