@@ -1,0 +1,23 @@
+name = "hearsay-api"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ALLOWED_ORIGIN = "https://parisa-singh.github.io"
+
+# KV namespace for caching Reddit OAuth tokens
+# Create with: npx wrangler kv namespace create "HEARSAY_CACHE"
+# Then paste the id below
+# [[kv_namespaces]]
+# binding = "KV"
+# id = "PASTE_YOUR_KV_NAMESPACE_ID_HERE"
+
+# Secrets — set via: npx wrangler secret put <KEY>
+# GOOGLE_API_KEY
+# YELP_API_KEY
+# REDDIT_CLIENT_ID
+# REDDIT_CLIENT_SECRET
+# YOUTUBE_API_KEY
+# SERPAPI_KEY
+# ANTHROPIC_API_KEY

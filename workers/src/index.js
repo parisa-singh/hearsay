@@ -1,0 +1,42 @@
+import { Router } from 'itty-router'
+import { handleOptions, addCorsHeaders } from './utils/cors.js'
+import { errorResponse } from './utils/errors.js'
+import { googleHandler } from './routes/google.js'
+import { yelpHandler } from './routes/yelp.js'
+import { redditHandler } from './routes/reddit.js'
+import { youtubeHandler } from './routes/youtube.js'
+import { tripadvisorHandler } from './routes/tripadvisor.js'
+import { facebookHandler } from './routes/facebook.js'
+import { trustpilotHandler } from './routes/trustpilot.js'
+import { synthesizeHandler } from './routes/synthesize.js'
+
+const router = Router()
+
+// Handle CORS preflight — must be first
+router.options('*', handleOptions)
+
+// Platform routes
+router.get('/google', googleHandler)
+router.get('/yelp', yelpHandler)
+router.get('/reddit', redditHandler)
+router.get('/youtube', youtubeHandler)
+router.get('/tripadvisor', tripadvisorHandler)
+router.get('/facebook', facebookHandler)
+router.get('/trustpilot', trustpilotHandler)
+
+// AI synthesis
+router.post('/synthesize', synthesizeHandler)
+
+// Health check
+router.get('/', () => Response.json({ status: 'ok', service: 'hearsay-api' }))
+
+// 404 fallback
+router.all('*', () => errorResponse('Not found', 404))
+
+export default {
+  async fetch(request, env, ctx) {
+    const response = await router.handle(request, env, ctx)
+      .catch(err => errorResponse(err.message ?? 'Internal server error'))
+    return addCorsHeaders(response, request)
+  },
+}
