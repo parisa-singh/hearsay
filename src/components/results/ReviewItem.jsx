@@ -1,0 +1,54 @@
+import { truncateText, formatRelativeTime, starArray } from '../../utils/formatters'
+
+function StarRating({ rating, max = 5 }) {
+  if (!rating) return null
+  const { full, half, empty } = starArray(rating, max)
+  return (
+    <span className="flex items-center gap-0.5" aria-label={`${rating} out of ${max} stars`}>
+      {Array(full).fill(null).map((_, i) => (
+        <svg key={`f${i}`} width="12" height="12" viewBox="0 0 24 24" fill="#FBBF24" className="text-amber-400">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+      ))}
+      {half === 1 && (
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="#FBBF24" className="text-amber-400">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77V2z"/>
+        </svg>
+      )}
+      {Array(empty).fill(null).map((_, i) => (
+        <svg key={`e${i}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#52525B" strokeWidth="2">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+      ))}
+    </span>
+  )
+}
+
+export default function ReviewItem({ review }) {
+  const { text, rating, author, date, url } = review
+
+  return (
+    <div className="py-3 border-b border-zinc-800 last:border-0">
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <div className="flex items-center gap-2">
+          {rating && <StarRating rating={rating} />}
+          {author && <span className="text-xs text-zinc-500">{author}</span>}
+        </div>
+        {date && <span className="text-xs text-zinc-600">{formatRelativeTime(date)}</span>}
+      </div>
+      <p className="text-sm text-zinc-300 leading-relaxed">
+        {truncateText(text, 220)}
+      </p>
+      {url && (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors mt-1 inline-block"
+        >
+          Read full →
+        </a>
+      )}
+    </div>
+  )
+}
