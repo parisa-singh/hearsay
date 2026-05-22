@@ -32,6 +32,11 @@ export async function yelpHandler(request, env) {
     }
 
     const searchRes = await fetch(`${YELP_BASE}/businesses/search?${searchP}`, { headers })
+    if (!searchRes.ok) {
+      const errText = await searchRes.text().catch(() => '')
+      return errorResponse(`Yelp search error ${searchRes.status}: ${errText.slice(0, 300)}`)
+    }
+
     const searchData = await searchRes.json()
     const business = searchData.businesses?.[0]
 
@@ -39,19 +44,23 @@ export async function yelpHandler(request, env) {
       return Response.json({ platform: 'yelp', reviews: [], reviewCount: null, rating: null })
     }
 
-    // Step 2: Get reviews (Yelp API: max 3 reviews, truncated to 160 chars)
+    // Step 2: Get reviews (Yelp API: max 3 reviews, 160-char truncation)
     let reviews = []
+    let reviewsDebug = null
     const reviewRes = await fetch(`${YELP_BASE}/businesses/${business.id}/reviews`, { headers })
     if (reviewRes.ok) {
       const reviewData = await reviewRes.json()
       reviews = (reviewData.reviews ?? [])
-        .filter(r => (r.text ?? '').length >= 10)
+        .filter(r => (r.text ?? '').length >= 5)
         .map(r => ({
           text: r.text ?? '',
           rating: r.rating ?? null,
           author: r.user?.name ?? null,
           date: r.time_created ?? null,
         }))
+    } else {
+      const errText = await reviewRes.text().catch(() => '')
+      reviewsDebug = `reviews endpoint: ${reviewRes.status} — ${errText.slice(0, 200)}`
     }
 
     const response = {
@@ -60,8 +69,8 @@ export async function yelpHandler(request, env) {
       rating: business.rating ?? null,
       reviewCount: business.review_count ?? null,
       sourceUrl: business.url ?? null,
-      note: 'Yelp reviews are truncated to 160 characters by the Yelp API.',
       reviews,
+      ...(reviewsDebug ? { reviewsDebug } : {}),
     }
 
     await setCached(cacheKey, response, CACHE_TTL)

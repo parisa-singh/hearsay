@@ -27,8 +27,8 @@ function StarRating({ rating, max = 5 }) {
   )
 }
 
-export default function ReviewItem({ review }) {
-  const { text, rating, author, date } = review
+export default function ReviewItem({ review, showVideoLink = false }) {
+  const { text, rating, author, date, url, videoTitle } = review
   const [expanded, setExpanded] = useState(false)
 
   const isLong = text.length > SHORT_LIMIT
@@ -37,13 +37,18 @@ export default function ReviewItem({ review }) {
   return (
     <div className="py-3 border-b border-zinc-800 last:border-0">
       <div className="flex items-center justify-between gap-2 mb-1.5">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           {rating && <StarRating rating={rating} />}
-          {author && <span className="text-xs text-zinc-500">{author}</span>}
+          {author && <span className="text-xs text-zinc-500 truncate">{author}</span>}
         </div>
-        {date && <span className="text-xs text-zinc-600">{formatRelativeTime(date)}</span>}
+        {date && <span className="text-xs text-zinc-600 shrink-0">{formatRelativeTime(date)}</span>}
       </div>
-      <p className="text-sm text-zinc-300 leading-relaxed">
+
+      {videoTitle && showVideoLink && (
+        <p className="text-xs text-zinc-600 mb-1 truncate">{videoTitle}</p>
+      )}
+
+      <p className="text-sm text-zinc-300 leading-relaxed break-words">
         {displayText}
         {isLong && (
           <button
@@ -54,6 +59,20 @@ export default function ReviewItem({ review }) {
           </button>
         )}
       </p>
+
+      {showVideoLink && url && (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1.5 inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-400 transition-colors"
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V9.19a8.16 8.16 0 0 0 4.77 1.52V7.27a4.85 4.85 0 0 1-1.01-.58z"/>
+          </svg>
+          Watch on YouTube
+        </a>
+      )}
     </div>
   )
 }

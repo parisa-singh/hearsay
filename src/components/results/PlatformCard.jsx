@@ -9,9 +9,9 @@ const LOAD_MORE_COUNT = 3
 
 function PlatformCardSkeleton() {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5 animate-pulse">
+    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:p-5 animate-pulse">
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-8 h-8 rounded-md bg-zinc-800" />
+        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-md bg-zinc-800" />
         <div className="h-4 w-24 rounded bg-zinc-800" />
         <div className="ml-auto h-6 w-12 rounded-full bg-zinc-800" />
       </div>
@@ -27,9 +27,9 @@ function PlatformCardSkeleton() {
 
 function PlatformCardError({ platform, error }) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
+    <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 sm:p-5">
       <div className="flex items-center gap-3 mb-3">
-        <img src={platform.logo} alt={platform.displayName} width={28} height={28} className="rounded-sm opacity-40" onError={e => { e.target.style.display = 'none' }} />
+        <img src={platform.logo} alt={platform.displayName} width={26} height={26} className="rounded-sm opacity-40" onError={e => { e.target.style.display = 'none' }} />
         <span className="text-sm font-medium text-zinc-500">{platform.displayName}</span>
       </div>
       <p className="text-sm text-zinc-600">
@@ -59,29 +59,29 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
   const externalUrl = getExternalUrl(platform, data, query ?? '')
   const displayedReviews = reviews.slice(0, displayCount)
   const hasMore = reviews.length > displayCount
-  const useInlineExpansion = platform.id === 'youtube'
+  const isYouTube = platform.id === 'youtube'
 
   return (
     <div
-      className="rounded-xl border bg-zinc-900 p-5 transition-all duration-300 animate-slide-up hover:border-zinc-700 flex flex-col"
+      className="rounded-xl border bg-zinc-900 p-4 sm:p-5 transition-all duration-300 animate-slide-up hover:border-zinc-700 flex flex-col"
       style={{ borderColor: `${platform.brandColor}30` }}
     >
       {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2.5">
+      <div className="flex items-start justify-between gap-2 mb-4">
+        <div className="flex items-center gap-2 min-w-0">
           <img
             src={platform.logo}
             alt={platform.displayName}
-            width={28}
-            height={28}
-            className="rounded-sm"
+            width={26}
+            height={26}
+            className="rounded-sm shrink-0"
             onError={e => { e.target.style.display = 'none' }}
           />
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-zinc-200">{label}</span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-sm font-semibold text-zinc-200 truncate">{label}</span>
               {platform.id === 'facebook' && (
-                <span className="text-xs text-zinc-600 italic">(public mentions)</span>
+                <span className="text-xs text-zinc-600 italic shrink-0">(public mentions)</span>
               )}
             </div>
             {reviewCount && (
@@ -91,8 +91,8 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
         </div>
 
         {rating != null && (
-          <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-semibold border ${colors.text} ${colors.bg} ${colors.border}`}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+          <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs sm:text-sm font-semibold border shrink-0 ${colors.text} ${colors.bg} ${colors.border}`}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
             </svg>
             {Number(rating).toFixed(1)}
@@ -107,29 +107,41 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
         ) : (
           <>
             {displayedReviews.map((review, i) => (
-              <ReviewItem key={i} review={review} />
+              <ReviewItem key={i} review={review} showVideoLink={isYouTube} />
             ))}
 
-            {/* Inline load more — YouTube only */}
-            {useInlineExpansion && hasMore && (
-              <button
-                onClick={() => setDisplayCount(c => c + LOAD_MORE_COUNT)}
-                className="mt-3 text-xs font-medium text-zinc-500 hover:text-zinc-300 transition-colors"
-              >
-                Load more ({reviews.length - displayCount} remaining)
-              </button>
+            {/* YouTube inline controls */}
+            {isYouTube && (hasMore || displayCount > INITIAL_COUNT) && (
+              <div className="mt-3 flex items-center gap-3">
+                {hasMore && (
+                  <button
+                    onClick={() => setDisplayCount(c => c + LOAD_MORE_COUNT)}
+                    className="text-xs font-medium text-zinc-500 hover:text-zinc-300 transition-colors"
+                  >
+                    Load more ({reviews.length - displayCount} remaining)
+                  </button>
+                )}
+                {displayCount > INITIAL_COUNT && (
+                  <button
+                    onClick={() => setDisplayCount(INITIAL_COUNT)}
+                    className="text-xs font-medium text-zinc-600 hover:text-zinc-400 transition-colors"
+                  >
+                    Show less
+                  </button>
+                )}
+              </div>
             )}
           </>
         )}
       </div>
 
-      {/* External "See more reviews" link */}
-      {!useInlineExpansion && externalUrl && (
+      {/* External link for non-YouTube platforms */}
+      {!isYouTube && externalUrl && (
         <a
           href={externalUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-4 text-xs font-medium transition-colors hover:opacity-80 inline-flex items-center gap-1"
+          className="mt-4 text-xs font-medium transition-colors hover:opacity-80 inline-flex items-center gap-1 shrink-0"
           style={{ color: platform.brandColor }}
         >
           See more reviews on {platform.displayName}
