@@ -6,6 +6,7 @@ export default function LocationBadge() {
   const [editing, setEditing] = useState(false)
   const [inputValue, setInputValue] = useState('')
   const [loading, setLoading] = useState(false)
+  const [wiping, setWiping] = useState(false)
 
   async function handleManualSubmit(e) {
     e.preventDefault()
@@ -17,6 +18,10 @@ export default function LocationBadge() {
       setEditing(false)
       setInputValue('')
     }
+  }
+
+  function handleReset() {
+    setWiping(true)
   }
 
   if (editing) {
@@ -47,67 +52,73 @@ export default function LocationBadge() {
     )
   }
 
-  if (hasLocation) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-zinc-400 flex-wrap justify-center">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" className="text-zinc-500 shrink-0">
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-        </svg>
-        <span className="text-zinc-300">
-          {location.city}{location.state ? `, ${location.state}` : ''}
-        </span>
-        <button
-          onClick={() => { setEditing(true); setInputValue(location.city ?? '') }}
-          className="text-zinc-600 hover:text-zinc-400 transition-colors underline underline-offset-2"
-        >
-          Change
-        </button>
-        <span className="text-zinc-800">·</span>
-        <button
-          onClick={clearLocation}
-          className="text-zinc-600 hover:text-red-400 transition-colors underline underline-offset-2"
-        >
-          Reset
-        </button>
-      </div>
-    )
-  }
-
-  if (status === 'denied') {
-    return (
-      <button
-        onClick={() => setEditing(true)}
-        className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
-      >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-          <circle cx="12" cy="10" r="3"/>
-        </svg>
-        Enter your city for local reviews
-      </button>
-    )
-  }
-
   return (
-    <div className="flex items-center gap-3 flex-wrap justify-center">
-      <button
-        onClick={requestLocation}
-        disabled={status === 'requesting'}
-        className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50"
-      >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-          <circle cx="12" cy="10" r="3"/>
-        </svg>
-        {status === 'requesting' ? 'Detecting…' : 'Detect my location'}
-      </button>
-      <span className="text-zinc-700 text-xs">or</span>
-      <button
-        onClick={() => setEditing(true)}
-        className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors underline underline-offset-2"
-      >
-        Enter city manually
-      </button>
-    </div>
+    <>
+      {wiping && (
+        <div
+          className="fixed inset-0 z-50 bg-zinc-950 animate-wipe-right pointer-events-none"
+          onAnimationEnd={() => {
+            clearLocation()
+            setWiping(false)
+          }}
+        />
+      )}
+
+      {hasLocation ? (
+        <div className="flex items-center gap-2 text-sm text-zinc-400 flex-wrap justify-center">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" className="text-zinc-500 shrink-0">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+          </svg>
+          <span className="text-zinc-300">
+            {location.city}{location.state ? `, ${location.state}` : ''}
+          </span>
+          <button
+            onClick={() => { setEditing(true); setInputValue(location.city ?? '') }}
+            className="text-zinc-600 hover:text-zinc-400 transition-colors underline underline-offset-2"
+          >
+            Change
+          </button>
+          <span className="text-zinc-800">·</span>
+          <button
+            onClick={handleReset}
+            className="text-zinc-600 hover:text-red-400 transition-colors underline underline-offset-2"
+          >
+            Reset
+          </button>
+        </div>
+      ) : status === 'denied' ? (
+        <button
+          onClick={() => setEditing(true)}
+          className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+          Enter your city for local reviews
+        </button>
+      ) : (
+        <div className="flex items-center gap-3 flex-wrap justify-center">
+          <button
+            onClick={requestLocation}
+            disabled={status === 'requesting'}
+            className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+            {status === 'requesting' ? 'Detecting…' : 'Detect my location'}
+          </button>
+          <span className="text-zinc-700 text-xs">or</span>
+          <button
+            onClick={() => setEditing(true)}
+            className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors underline underline-offset-2"
+          >
+            Enter city manually
+          </button>
+        </div>
+      )}
+    </>
   )
 }

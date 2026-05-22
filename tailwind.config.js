@@ -22,8 +22,9 @@ export default {
       },
       animation: {
         'fade-in': 'fadeIn 0.4s ease-out',
-        'slide-up': 'slideUp 0.4s ease-out',
+        'slide-up': 'slideUp 0.4s ease-out both',
         'bounce-pin': 'bouncePin 1.2s ease-in-out infinite',
+        'wipe-right': 'wipeRight 0.5s ease-in-out forwards',
       },
       keyframes: {
         fadeIn: {
@@ -37,6 +38,11 @@ export default {
         bouncePin: {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-10px)' },
+        },
+        wipeRight: {
+          '0%': { transform: 'translateX(-100%)' },
+          '50%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(100%)' },
         },
       },
     },

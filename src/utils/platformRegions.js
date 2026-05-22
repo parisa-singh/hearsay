@@ -1,48 +1,60 @@
-const EU = ['GB','IE','DE','FR','IT','ES','NL','SE','NO','DK','FI','AT','BE','CH','PL','PT','GR','CZ','RO','HU','SK','HR','BG','SI','EE','LV','LT','LU','MT','CY']
-const AU_NZ = ['AU', 'NZ']
+const EU = ['GB','IE','DE','FR','IT','ES','NL','SE','NO','DK','FI','AT','BE','CH','PL','PT','GR']
 const US_CA = ['US', 'CA']
+const SEA = ['TH', 'VN', 'SG', 'MY', 'ID', 'PH']
+const MIDDLE_EAST = ['AE', 'SA', 'QA', 'KW', 'BH', 'OM', 'JO', 'LB']
+const LATAM = ['BR', 'MX', 'CO', 'AR', 'PE', 'CL', 'EC']
 
 export function getPlatformTiers(countryCode) {
   const code = countryCode?.toUpperCase() ?? null
 
   if (!code) {
-    return {
-      primary: ['google', 'yelp', 'reddit', 'youtube', 'trustpilot'],
-      secondary: ['tripadvisor', 'facebook'],
-    }
+    return { platforms: null }
   }
 
   if (US_CA.includes(code)) {
     return {
-      primary: ['google', 'yelp', 'reddit', 'youtube', 'trustpilot'],
-      secondary: ['tripadvisor', 'facebook'],
+      platforms: ['google', 'yelp', 'tripadvisor', 'facebook', 'opentable', 'nextdoor', 'foursquare'],
     }
   }
 
   if (EU.includes(code)) {
     return {
-      primary: ['google', 'trustpilot', 'youtube', 'reddit', 'tripadvisor'],
-      secondary: ['yelp', 'facebook'],
+      platforms: ['google', 'tripadvisor', 'thefork', 'facebook', 'yelp', 'michelin', 'foursquare'],
     }
   }
 
-  if (AU_NZ.includes(code)) {
+  if (code === 'CN') {
     return {
-      primary: ['google', 'youtube', 'trustpilot', 'reddit', 'tripadvisor'],
-      secondary: ['yelp', 'facebook'],
+      platforms: ['dianping', 'meituan', 'baidumaps', 'gaode', 'xiaohongshu', 'tripadvisor', 'wechat'],
     }
   }
 
   if (code === 'IN') {
     return {
-      primary: ['google', 'youtube', 'reddit', 'trustpilot', 'tripadvisor'],
-      secondary: ['yelp', 'facebook'],
+      platforms: ['google', 'tripadvisor', 'facebook', 'justdial', 'magicpin', 'zomato', 'swiggy'],
     }
   }
 
-  // Default: everything else (global / unknown region)
+  if (MIDDLE_EAST.includes(code)) {
+    return {
+      platforms: ['google', 'tripadvisor', 'facebook', 'opentable', 'foursquare', 'zomato', 'talabat'],
+    }
+  }
+
+  if (SEA.includes(code)) {
+    return {
+      platforms: ['google', 'tripadvisor', 'facebook', 'grabfood', 'agoda', 'wongnai', 'chope'],
+    }
+  }
+
+  if (LATAM.includes(code)) {
+    return {
+      platforms: ['google', 'tripadvisor', 'facebook', 'thefork', 'foursquare', 'rappi', 'degusta'],
+    }
+  }
+
+  // Default: everything else — show global integrated platforms
   return {
-    primary: ['google', 'youtube', 'trustpilot', 'reddit', 'tripadvisor'],
-    secondary: ['yelp', 'facebook'],
+    platforms: ['google', 'yelp', 'youtube', 'trustpilot', 'reddit', 'tripadvisor', 'facebook'],
   }
 }

@@ -4,14 +4,12 @@ import { queryKeys } from '../constants/queryKeys'
 import { useUIStore } from '../store/uiStore'
 import { PLATFORMS } from '../constants/platforms'
 
-/**
- * Fires parallel queries for all enabled platforms.
- * Uses useQueries so each platform has its own loading/error state.
- * Promise.allSettled semantics: one platform failing doesn't block others.
- */
 export function useAllPlatforms(query) {
   const { isPlatformEnabled, location } = useUIStore()
-  const enabledPlatforms = PLATFORMS.filter(p => isPlatformEnabled(p.id))
+
+  const enabledPlatforms = PLATFORMS.filter(
+    p => p.integrated && isPlatformEnabled(p.id)
+  )
 
   const locationParams = location
     ? { lat: location.lat, lng: location.lng, city: location.city, country: location.country }

@@ -22,23 +22,23 @@ export const useUIStore = create(
       },
       isPlatformEnabled: (id) => get().selectedPlatforms.has(id),
 
-      // Search history (last 5)
+      // Search history (last 20)
       searchHistory: [],
       addToHistory: (query) => {
         const history = get().searchHistory.filter(q => q !== query)
-        set({ searchHistory: [query, ...history].slice(0, 5) })
+        set({ searchHistory: [query, ...history].slice(0, 20) })
       },
+      clearHistory: () => set({ searchHistory: [] }),
 
-      // Theme
+      // History sidebar
+      historyOpen: false,
+      setHistoryOpen: (open) => set({ historyOpen: open }),
+
+      // Theme (kept for persistence compatibility — toggle removed from UI)
       theme: 'dark',
-      toggleTheme: () => {
-        const next = get().theme === 'dark' ? 'light' : 'dark'
-        set({ theme: next })
-        document.documentElement.classList.toggle('dark', next === 'dark')
-      },
 
       // Location
-      location: null, // { lat, lng, city, state, country }
+      location: null,
       setLocation: (loc) => set({ location: loc }),
       clearLocation: () => set({ location: null }),
     }),
@@ -48,7 +48,6 @@ export const useUIStore = create(
         searchHistory: state.searchHistory,
         theme: state.theme,
         location: state.location,
-        // Don't persist selectedPlatforms as Set — serialize manually
       }),
     }
   )

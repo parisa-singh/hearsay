@@ -5,14 +5,13 @@ export default function Footer() {
         <p>
           Built by{' '}
           <a
-            href="https://github.com/parisa-singh"
+            href="https://www.linkedin.com/in/parisa-singh/"
             target="_blank"
             rel="noopener noreferrer"
             className="text-zinc-400 hover:text-zinc-200 transition-colors"
           >
             Parisa Singh
           </a>
-          {' '}· CS + Business, UMass Amherst
         </p>
         <div className="flex items-center gap-4">
           <a
@@ -24,7 +23,7 @@ export default function Footer() {
             GitHub
           </a>
           <span>·</span>
-          <span>Reviews sourced in real time · Not stored</span>
+          <span>Reviews sourced in real time</span>
         </div>
       </div>
     </footer>
