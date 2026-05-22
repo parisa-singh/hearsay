@@ -1,7 +1,11 @@
+import { useState } from 'react'
 import { PLATFORM_MAP } from '../../constants/platforms'
-import { formatRating, formatReviewCount } from '../../utils/formatters'
+import { formatReviewCount } from '../../utils/formatters'
 import { sentimentColor } from '../../utils/sentimentColor'
 import ReviewItem from './ReviewItem'
+
+const INITIAL_COUNT = 3
+const LOAD_MORE_COUNT = 3
 
 function PlatformCardSkeleton() {
   return (
@@ -29,22 +33,20 @@ function PlatformCardError({ platform, error }) {
         <span className="text-sm font-medium text-zinc-500">{platform.displayName}</span>
       </div>
       <p className="text-sm text-zinc-600">
-        {error?.message?.includes('timed out')
-          ? 'Request timed out — try again'
-          : 'Reviews unavailable right now'}
+        {error?.message?.includes('timed out') ? 'Request timed out — try again' : 'Reviews unavailable right now'}
       </p>
     </div>
   )
 }
 
-function getSeeMoreUrl(platform, data, query) {
+function getExternalUrl(platform, data, query) {
   if (data?.sourceUrl) return data.sourceUrl
   if (platform.id === 'reddit') return `https://www.reddit.com/search?q=${encodeURIComponent(query + ' review')}&sort=relevance`
-  if (platform.id === 'youtube') return `https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' review')}`
   return null
 }
 
 export default function PlatformCard({ platformId, data, isLoading, isError, error, query }) {
+  const [displayCount, setDisplayCount] = useState(INITIAL_COUNT)
   const platform = PLATFORM_MAP[platformId]
   if (!platform) return null
 
@@ -54,7 +56,10 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
   const { rating, reviewCount, reviews = [] } = data
   const colors = sentimentColor(rating)
   const label = platform.label ?? platform.displayName
-  const seeMoreUrl = getSeeMoreUrl(platform, data, query ?? '')
+  const externalUrl = getExternalUrl(platform, data, query ?? '')
+  const displayedReviews = reviews.slice(0, displayCount)
+  const hasMore = reviews.length > displayCount
+  const useInlineExpansion = platform.id === 'youtube'
 
   return (
     <div
@@ -100,16 +105,28 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
         {reviews.length === 0 ? (
           <p className="text-sm text-zinc-600 py-2">No reviews found for this search.</p>
         ) : (
-          reviews.slice(0, 3).map((review, i) => (
-            <ReviewItem key={i} review={review} />
-          ))
+          <>
+            {displayedReviews.map((review, i) => (
+              <ReviewItem key={i} review={review} />
+            ))}
+
+            {/* Inline load more — YouTube only */}
+            {useInlineExpansion && hasMore && (
+              <button
+                onClick={() => setDisplayCount(c => c + LOAD_MORE_COUNT)}
+                className="mt-3 text-xs font-medium text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                Load more ({reviews.length - displayCount} remaining)
+              </button>
+            )}
+          </>
         )}
       </div>
 
-      {/* See more reviews link */}
-      {seeMoreUrl && (
+      {/* External "See more reviews" link */}
+      {!useInlineExpansion && externalUrl && (
         <a
-          href={seeMoreUrl}
+          href={externalUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-4 text-xs font-medium transition-colors hover:opacity-80 inline-flex items-center gap-1"

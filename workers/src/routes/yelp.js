@@ -28,7 +28,7 @@ export async function yelpHandler(request, env) {
     } else if (city) {
       searchP.set('location', city)
     } else {
-      searchP.set('location', 'United States') // fallback
+      searchP.set('location', 'United States')
     }
 
     const searchRes = await fetch(`${YELP_BASE}/businesses/search?${searchP}`, { headers })
@@ -39,9 +39,20 @@ export async function yelpHandler(request, env) {
       return Response.json({ platform: 'yelp', reviews: [], reviewCount: null, rating: null })
     }
 
-    // Step 2: Get reviews (max 3, 160-char truncated — Yelp API limitation)
-    const reviewRes = await fetch(`${YELP_BASE}/businesses/${business.id}/reviews?limit=3`, { headers })
-    const reviewData = await reviewRes.json()
+    // Step 2: Get reviews (Yelp API: max 3 reviews, truncated to 160 chars)
+    let reviews = []
+    const reviewRes = await fetch(`${YELP_BASE}/businesses/${business.id}/reviews`, { headers })
+    if (reviewRes.ok) {
+      const reviewData = await reviewRes.json()
+      reviews = (reviewData.reviews ?? [])
+        .filter(r => (r.text ?? '').length >= 10)
+        .map(r => ({
+          text: r.text ?? '',
+          rating: r.rating ?? null,
+          author: r.user?.name ?? null,
+          date: r.time_created ?? null,
+        }))
+    }
 
     const response = {
       platform: 'yelp',
@@ -50,15 +61,7 @@ export async function yelpHandler(request, env) {
       reviewCount: business.review_count ?? null,
       sourceUrl: business.url ?? null,
       note: 'Yelp reviews are truncated to 160 characters by the Yelp API.',
-      reviews: (reviewData.reviews ?? [])
-        .filter(r => (r.text ?? '').length >= 20)
-        .map(r => ({
-          text: r.text ?? '',
-          rating: r.rating ?? null,
-          author: r.user?.name ?? null,
-          date: r.time_created ?? null,
-          url: r.url ?? null,
-        })),
+      reviews,
     }
 
     await setCached(cacheKey, response, CACHE_TTL)

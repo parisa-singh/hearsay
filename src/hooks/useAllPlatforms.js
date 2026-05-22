@@ -23,7 +23,7 @@ export function useAllPlatforms(query) {
       queryFn: () => fetchPlatform(platform.endpoint, { query, ...locationParams }),
       enabled: Boolean(query),
       staleTime: 5 * 60 * 1000,
-      retry: 1,
+      retry: 0,
     })),
   })
 

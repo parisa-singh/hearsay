@@ -1,8 +1,10 @@
 import PlatformCard from './PlatformCard'
 
 function platformSortScore(r) {
+  if (r.isError) return 2
   if (r.isLoading) return 1
-  if (r.data && !r.isError && (r.data.reviews?.length > 0 || r.data.rating != null)) return 0
+  if (!r.data) return 2
+  if (r.data.reviews?.length > 0 || r.data.rating != null) return 0
   return 2
 }
 
