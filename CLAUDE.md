@@ -7,35 +7,37 @@ Read this file first before doing anything else in a new session.
 
 ## Project Overview
 
-**Hearsay** is a cross-platform review aggregator that queries 7 major platforms in parallel and surfaces reviews side by side. Users search for any product, restaurant, or place and get:
-- Reviews from Google, Yelp, Reddit, YouTube, TripAdvisor, Facebook, and Trustpilot
+**Hearsay** is a cross-platform review aggregator. Users search for any restaurant, product, or place and get real reviews pulled in parallel from multiple platforms — not one algorithm's version.
+
+- Reviews from 7 integrated platforms shown side-by-side
 - Algorithmic divergence detection when platforms disagree by 1.5+ stars
-- Reviews split into Global and Near You (location-aware) tabs
-- Platform comparison chart (collapsible)
+- Location-aware: detects or accepts manual city entry, surfaces platforms popular in that region
+- Regional coming-soon chips show what's available vs. what's in progress per country
+- Global / Near You tab split on results page
 
 **No AI synthesis layer** — divergence is calculated algorithmically in `src/utils/divergence.js`.
 
-**Mission**: Make review bias visible. Most people get one platform's view. Hearsay shows the full picture.
-
-**Live URL**: https://parisa-singh.github.io/hearsay
-**Worker URL**: https://hearsay-api.parisa-singh.workers.dev
-**GitHub**: https://github.com/parisa-singh/hearsay
+**Live URL**: https://parisa-singh.github.io/hearsay  
+**Worker URL**: https://hearsay-api.parisa-singh.workers.dev  
+**GitHub**: https://github.com/parisa-singh/hearsay  
+**Builder**: Parisa Singh — https://www.linkedin.com/in/parisa-singh/
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology | Version |
+| Layer | Technology | Notes |
 |---|---|---|
-| Frontend framework | Vite + React | Vite 5, React 18 |
+| Frontend framework | Vite + React 19 | |
 | Language | JavaScript (not TypeScript) | ES2022+ |
-| Styling | Tailwind CSS + shadcn/ui | Tailwind 3 |
-| Server state | TanStack Query | v5 |
-| UI state | Zustand | v4 |
-| Charts | Recharts | v2 |
-| Routing | React Router | v6 |
+| Styling | Tailwind CSS v3 | Custom keyframes: fade-in, slide-up, bounce-pin, wipe-right |
+| Server state | TanStack Query v5 | `useQueries` for parallel platform fetching |
+| UI state | Zustand v5 | Persist middleware for history, theme, location |
+| Charts | Recharts v2 | RadarChart + bar comparison in ComparisonChart |
+| Routing | React Router v7 | createBrowserRouter, basename: '/hearsay' |
 | Serverless API | Cloudflare Workers | itty-router v4 |
-| Deployment | GitHub Actions → GitHub Pages | Native actions/deploy-pages |
+| Deployment | GitHub Actions → GitHub Pages | `npm install` + `vite build` + deploy-pages |
+| Testing | Vitest + jsdom + Testing Library | `npm test` runs 34 tests |
 
 ---
 
@@ -48,20 +50,21 @@ https://hearsay-api.parisa-singh.workers.dev
         ↕
 GET  /google        → Google Places API (textsearch + Place Details)
 GET  /yelp          → Yelp Fusion API (Business Search + Reviews)
-GET  /reddit        → Reddit OAuth API (client credentials + KV-cached token)
+GET  /reddit        → Reddit OAuth API (client credentials, route ready — no credentials yet)
 GET  /youtube       → YouTube Data API v3 (Search + Videos + CommentThreads)
 GET  /tripadvisor   → SerpAPI (TripAdvisor engine, 24hr cache)
-GET  /facebook      → SerpAPI fallback (labeled "Facebook Mentions")
-GET  /trustpilot    → Trustpilot page fetch + JSON-LD extraction
+GET  /facebook      → SerpAPI fallback (labeled "Facebook Mentions", 24hr cache)
+GET  /trustpilot    → Trustpilot page HTML → JSON-LD extraction (fragile)
 ```
 
 **Critical architectural details**:
 - `vite.config.js` sets `base: '/hearsay/'` — required for GitHub Pages subdirectory hosting
 - `public/404.html` contains the spa-github-pages redirect script — enables React Router on direct URL access
-- Cloudflare Workers CORS: allows `https://parisa-singh.github.io` and localhost
+- Cloudflare Workers CORS: allows `https://parisa-singh.github.io` and `http://localhost:*`
 - All API secrets stored via `wrangler secret put` — never in code or git
-- Parallel fetching: `useQueries` (TanStack Query) — one platform failing doesn't block others
+- Parallel fetching: `useQueries` — one platform failing never blocks others (`retry: 0`)
 - `VITE_API_BASE_URL` must be set as a GitHub Actions repo secret for production builds
+- `useAllPlatforms.js` filters to `p.integrated === true` — coming-soon platforms are never queried
 
 ---
 
@@ -71,16 +74,16 @@ GET  /trustpilot    → Trustpilot page fetch + JSON-LD extraction
 ```
 VITE_API_BASE_URL=https://hearsay-api.parisa-singh.workers.dev
 ```
-Also set as a GitHub Actions repo secret so builds pick it up.
+Also set as a GitHub Actions repo secret so production builds pick it up.
 
 **Workers** (set via `cd workers && npx wrangler secret put <NAME>`):
 ```
-GOOGLE_API_KEY       — Google Cloud API key (Places API + YouTube Data API v3 enabled)
-YELP_API_KEY         — Yelp Fusion API key
-YOUTUBE_API_KEY      — Same key as GOOGLE_API_KEY
-SERPAPI_KEY          — SerpAPI key (TripAdvisor + Facebook routes)
-REDDIT_CLIENT_ID     — Reddit app client ID (skipped for now — policy acceptance required)
-REDDIT_CLIENT_SECRET — Reddit app client secret (skipped for now)
+GOOGLE_API_KEY        — Google Cloud key (Places API + YouTube Data API v3 both enabled on same key)
+YELP_API_KEY          — Yelp Fusion API key
+YOUTUBE_API_KEY       — Same key as GOOGLE_API_KEY
+SERPAPI_KEY           — SerpAPI key (TripAdvisor + Facebook routes)
+REDDIT_CLIENT_ID      — Reddit app client ID (not yet set — see Known Issues)
+REDDIT_CLIENT_SECRET  — Reddit app client secret (not yet set)
 ```
 
 ---
@@ -89,73 +92,91 @@ REDDIT_CLIENT_SECRET — Reddit app client secret (skipped for now)
 
 | Platform | Status | Notes |
 |---|---|---|
-| Google | Working | textsearch → Place Details |
-| Yelp | Working | 3 reviews max, 160-char truncation enforced by Yelp API. Reviews endpoint sometimes returns 4xx for non-partner keys — card shows rating but no reviews text. |
-| YouTube | Working | Comments + video descriptions as review signal |
-| Reddit | Not working | No credentials — Reddit policy acceptance blocked sign-up. Route implemented, needs REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET |
-| TripAdvisor | Working | SerpAPI; 24hr cache |
-| Facebook | Working | SerpAPI fallback; labeled "Mentions"; 24hr cache |
-| Trustpilot | Broken/partial | JSON-LD scraping from Trustpilot HTML. Frequently fails — Trustpilot blocks Workers' user agent or changes markup. Needs a real API approach. |
-| Zomato | Not started | API deprecated 2020. Website is JS-rendered, scraping blocked. Needs a real partnership/API key or alternative approach. Currently coming-soon. |
+| Google | ✅ Working | textsearch → Place Details; handles chain names well |
+| Yelp | ✅ Working (limited) | 3 reviews max, 160-char truncation enforced by Yelp API. Reviews endpoint sometimes returns 4xx for non-partner keys — card shows rating + note, no review text. `sourceUrl` always returned so "See more on Yelp" link works. |
+| YouTube | ✅ Working | Comments + video descriptions as review signal; 2hr cache; links back to videos |
+| TripAdvisor | ✅ Working | SerpAPI; 24hr cache |
+| Facebook | ✅ Working | SerpAPI fallback; labeled "Facebook Mentions"; 24hr cache |
+| Reddit | ❌ No credentials | Route fully implemented. Need to accept Reddit Responsible Builder Policy then add secrets. |
+| Trustpilot | ⚠️ Broken/partial | JSON-LD scraping from page HTML; Trustpilot frequently blocks Workers' user agent. Returns empty silently. Needs real API approach. |
+
+---
 
 ## Future API Work (Priority Order)
 
-These platforms are shown as "coming soon" in the UI. Implementation details:
+### 1. Reddit — just needs credentials
+- Route: `workers/src/routes/reddit.js` — fully implemented, no code changes needed
+- Steps: Visit reddit.com/prefs/apps → accept Responsible Builder Policy → create app → `wrangler secret put REDDIT_CLIENT_ID` + `wrangler secret put REDDIT_CLIENT_SECRET`
 
-### Reddit
-- Route: `workers/src/routes/reddit.js` — fully implemented
-- Needs: Accept Reddit Responsible Builder Policy at reddit.com/dev, then `wrangler secret put REDDIT_CLIENT_ID` and `wrangler secret put REDDIT_CLIENT_SECRET`
-- No code changes required — just credentials
+### 2. Trustpilot — needs real approach
+- Route: `workers/src/routes/trustpilot.js` — JSON-LD scraping, frequently fails
+- Options: (a) SerpAPI has a Trustpilot engine (simplest), (b) Trustpilot Business API (requires account), (c) improve scraping with better headers/retry
 
-### Trustpilot
-- Route: `workers/src/routes/trustpilot.js` — JSON-LD scraping, fragile
-- Problem: Trustpilot blocks Cloudflare Worker user agents; markup changes break extraction
-- Fix options: (1) Use Trustpilot's official Business API (requires business account), (2) SerpAPI has a Trustpilot engine, (3) Keep scraping but add better error handling and fallback
+### 3. Foursquare — most actionable coming-soon for US/EU
+- Has a Places API free tier at location.foursquare.com
+- Would cover US/CA and EU regional chips immediately
 
-### Zomato
-- No route yet. Zomato's public API was deprecated in 2020.
-- Fix options: (1) Zomato Developer API (requires application + approval via developers.zomato.com), (2) SerpAPI may index Zomato results
-- Currently shown as coming-soon chip in India/Middle East regional views
+### 4. Zomato — India/Middle East regional chip
+- Public API deprecated 2020; website is JS-rendered
+- Options: (a) Apply at developers.zomato.com, (b) SerpAPI may index Zomato
 
-### JustDial, Magicpin (India)
-- No routes. No public APIs available.
-- Would require web scraping or partnership — low priority
+### 5. OpenTable — US regional chip
+- Has affiliate API requiring partnership approval
+- Alternative: SerpAPI
 
-### OpenTable, Foursquare (US/EU)
-- OpenTable: Has an affiliate API but requires partnership approval
-- Foursquare: Has Places API (free tier) — most actionable next step for US/EU regions
-
-### TheFork, Michelin (Europe)
-- TheFork: No public API. Web scraping possible but fragile.
-- Michelin: No public API. Static data (Michelin star status) could be hardcoded.
-
-### GrabFood, Agoda, Wongnai, Chope (SE Asia)
-- All require local developer accounts or partnerships. Low priority.
-
-### China platforms (Dianping, Meituan, Baidu Maps, Gaode, Xiaohongshu, WeChat)
-- All require Chinese developer accounts/business registration. Not feasible without local entity.
-
-### Talabat, Rappi, Degusta (Middle East / LATAM)
-- No public APIs. Low priority.
+### 6. Regional platforms (low priority — require local partnerships)
+- **India**: JustDial, Magicpin, Swiggy — no public APIs
+- **SE Asia**: GrabFood, Agoda, Wongnai, Chope — require local developer accounts
+- **Europe**: TheFork (no public API), Michelin (static data possible)
+- **Middle East**: Talabat — no public API
+- **LATAM**: Rappi, Degusta — no public APIs
+- **China**: Dianping, Meituan, Baidu Maps, Gaode, Xiaohongshu, WeChat — require Chinese business entity, not feasible
 
 ---
 
 ## Key UI Decisions
 
-- **Platform ordering**: Working platforms (data returned) appear first; loading states second; errors last. Sorted in `PlatformGrid.jsx`.
-- **Comparison chart**: Collapsible toggle (`ComparisonChart.jsx`), collapsed by default. Only shows if 2+ platforms have star ratings.
-- **Reviews per card**: 3 reviews shown, each truncated at 120 chars with inline "Show more / Show less" toggle (`ReviewItem.jsx`).
-- **See more reviews**: Each card has a "See more reviews on [Platform]" link at the bottom. Uses `sourceUrl` from API response where available; falls back to constructed search URLs for Reddit and YouTube.
-- **No per-review external links**: Individual reviews don't link out to platform pages — only the card-level "See more reviews" link does. This prevents accidental redirects (was a Yelp UX issue).
-- **Divergence**: Algorithmic — flags 1.5+ star gap between highest and lowest rated platforms (`src/utils/divergence.js`).
+- **Layout**: Shared `Layout.jsx` wraps all routes via React Router `<Outlet>`. `key={pathname}` on the content div triggers `animate-fade-in` on every route change.
+- **Platform toggles**: All 7 integrated platforms are selected (green) by default. Users deselect what they don't want. Coming-soon chips appear in a second row below — grayed, unclickable, "Soon" badge.
+- **Regional chips**: `getPlatformTiers(countryCode)` in `platformRegions.js` returns 7 platforms per region. Integrated ones go row 1, coming-soon go row 2. Stagger animation (`animate-slide-up` with delay) on region change. Location banner auto-dismisses after 3s.
+- **No-location state**: Shows flat list of all 7 integrated platforms with no regional grouping.
+- **Error/empty cards hidden**: `PlatformGrid` filters out results where `isError` is true or data has no rating AND no reviews. Loading skeletons still show.
+- **Card ordering**: Working platforms (score 0) → loading (score 1) → error/empty (score 2). Sort in `platformSortScore()` in `PlatformGrid.jsx`. Error cards are hidden entirely by the filter before sorting.
+- **Reviews per card**: 3 shown initially, each truncated at 120 chars with "Show more/less" (`ReviewItem.jsx`). YouTube has inline "Load more / Show less" pagination.
+- **Yelp card note**: Shows "Yelp limits API previews to 3 snippets" or "Yelp review previews unavailable via API" below the review list, above the external link.
+- **Divergence**: Algorithmic — `calculateDivergence()` flags 1.5+ star gap. Returns `{ detected, platform_a, platform_b, explanation }`.
+- **Location reset**: Clicking Reset triggers a full-screen `animate-wipe-right` overlay (zinc-950, sweeps left→right) that calls `clearLocation()` on animation end.
+- **Search history sidebar**: Right-side drawer, `w-80`, slides in from right. Stores last 20 searches. "View all →" button on homepage opens it. "Clear all" wipes history.
+- **SerpAPI budget**: 100 searches/month shared between TripAdvisor and Facebook. Both are default-on — watch usage. 24hr caching helps significantly.
+- **YouTube API quota**: ~71 full queries/day. 2hr caching.
+
+---
+
+## Testing
+
+```bash
+npm test          # run all tests once (vitest run)
+npm run test:watch  # watch mode
+```
+
+**Test files** in `src/test/`:
+- `platformRegions.test.js` — verifies all 8 regions return correct 7-platform lists, handles edge cases
+- `platforms.test.js` — 7 integrated platforms, all default-enabled, coming-soon has no endpoint
+- `platformGrid.test.js` — visibility filter (hides errors/empty, keeps loading+data), sort order
+- `divergence.test.js` — gap detection threshold, null rating handling, explanation string format
+
+34 tests, all passing. Run before pushing any changes to core utility functions.
 
 ---
 
 ## Development Commands
 
 ```bash
-# Frontend dev server (http://localhost:5173)
+# Frontend dev server (http://localhost:5173/hearsay/)
 npm run dev
+
+# Run tests
+npm test
 
 # Frontend production build
 npm run build
@@ -171,15 +192,21 @@ cd workers && npx wrangler secret put <KEY_NAME>
 
 # List Worker secrets
 cd workers && npx wrangler secret list
+
+# Check GitHub Actions deploy status
+gh run list --limit 5
 ```
 
 ---
 
 ## Deployment Process
 
-**Frontend**: Push to `main` → GitHub Actions auto-builds (`npm ci && npm run build`) → deploys `dist/` via `actions/upload-pages-artifact` + `actions/deploy-pages`. `VITE_API_BASE_URL` injected from GitHub repo secret during build.
+**Frontend**: Push to `main` → GitHub Actions runs `.github/workflows/deploy.yml`:
+1. `npm install` (not `npm ci` — lock file has cross-platform optional dep issues on Windows→Linux)
+2. `npm run build` with `VITE_API_BASE_URL` injected from repo secret
+3. `dist/` uploaded via `actions/upload-pages-artifact` + deployed via `actions/deploy-pages`
 
-**Workers**: Manual — `cd workers && npx wrangler deploy`. Secrets are live immediately after `wrangler secret put`, no redeploy needed.
+**Workers**: Manual — `cd workers && npx wrangler deploy`. Secrets go live immediately after `wrangler secret put`, no redeploy needed.
 
 ---
 
@@ -187,100 +214,91 @@ cd workers && npx wrangler secret list
 
 ```
 hearsay/
-├── .github/workflows/deploy.yml    ← GitHub Actions: build + deploy to GitHub Pages
+├── .github/workflows/deploy.yml    ← GitHub Actions: npm install + build + deploy
 ├── .env.example                    ← Template for VITE_API_BASE_URL (committed)
-├── .env.local                      ← Actual values (GITIGNORED)
-├── vite.config.js                  ← base: '/hearsay/', React plugin
-├── tailwind.config.js              ← Custom colors, animation config
-├── index.html                      ← App shell + spa-github-pages history script
+├── .env.local                      ← Actual dev values (GITIGNORED)
+├── vite.config.js                  ← base: '/hearsay/', React plugin, Vitest config
+├── tailwind.config.js              ← Colors, animations (fade-in, slide-up, wipe-right, bounce-pin)
+├── index.html                      ← App shell + spa-github-pages history redirect script
 ├── public/
-│   ├── 404.html                    ← SPA routing fix for GitHub Pages
-│   └── logos/                      ← Platform SVG logos
+│   ├── 404.html                    ← SPA routing fix for GitHub Pages direct URL access
+│   └── logos/                      ← SVG logos for all platforms (integrated + coming-soon)
 ├── src/
 │   ├── pages/
-│   │   ├── HomePage.jsx            ← Search bar, platform toggles, location badge
-│   │   ├── ResultsPage.jsx         ← Results: divergence alert, chart, tabs, cards
-│   │   ├── AboutPage.jsx
+│   │   ├── HomePage.jsx            ← Hero, search bar, platform toggle, location badge, history sidebar
+│   │   ├── ResultsPage.jsx         ← Divergence alert, comparison chart, ReviewTabs
+│   │   ├── AboutPage.jsx           ← Mission, Features grid, Technical notes, builder info
 │   │   └── NotFoundPage.jsx
 │   ├── components/
-│   │   ├── layout/Header.jsx
-│   │   ├── layout/Footer.jsx
-│   │   ├── search/SearchBar.jsx
-│   │   ├── search/PlatformToggle.jsx
-│   │   ├── search/LocationBadge.jsx
-│   │   ├── results/DivergenceAlert.jsx  ← Shown when 2+ platforms differ by 1.5+ stars
-│   │   ├── results/ComparisonChart.jsx  ← Collapsible RadarChart + bar comparison
-│   │   ├── results/PlatformGrid.jsx     ← Sorts working platforms first; passes query prop
-│   │   ├── results/PlatformCard.jsx     ← Card with 3 reviews + "See more" link
-│   │   ├── results/ReviewItem.jsx       ← Truncated review with Show more/less toggle
-│   │   ├── results/ReviewTabs.jsx       ← Global / Near You tab switcher
-│   │   └── results/LocalEmptyState.jsx  ← "Not in [City] yet" animated empty state
+│   │   ├── layout/
+│   │   │   ├── Layout.jsx              ← Shared layout wrapper (Header + animated Outlet + Footer)
+│   │   │   ├── Header.jsx              ← Logo, About link, GitHub link (no theme toggle)
+│   │   │   ├── Footer.jsx              ← LinkedIn link, GitHub link, "Reviews sourced in real time"
+│   │   │   └── SearchHistorySidebar.jsx ← Right-side drawer, last 20 searches, clear all
+│   │   ├── search/
+│   │   │   ├── SearchBar.jsx           ← Main search input (compact prop for ResultsPage)
+│   │   │   ├── PlatformToggle.jsx      ← Regional chips (integrated row + coming-soon row)
+│   │   │   └── LocationBadge.jsx       ← Detect / manual entry / change / reset with wipe animation
+│   │   └── results/
+│   │       ├── DivergenceAlert.jsx     ← Shown when 2+ platforms differ by 1.5+ stars
+│   │       ├── ComparisonChart.jsx     ← Collapsible RadarChart + bar comparison
+│   │       ├── PlatformGrid.jsx        ← Filters empty/error, sorts working-first, renders cards
+│   │       ├── PlatformCard.jsx        ← Card: header, reviews, Yelp note, "See more" link
+│   │       ├── ReviewItem.jsx          ← Truncated review, Show more/less, YouTube video link
+│   │       ├── ReviewTabs.jsx          ← Global / Near You tab switcher
+│   │       └── LocalEmptyState.jsx     ← Shown when Near You tab has no data
 │   ├── hooks/
-│   │   ├── useAllPlatforms.js      ← TanStack Query useQueries parallel fetch
-│   │   └── useLocation.js          ← Geolocation + Nominatim reverse geocoding
+│   │   ├── useAllPlatforms.js      ← Parallel fetch for all integrated+enabled platforms
+│   │   └── useLocation.js          ← Geolocation API + Nominatim reverse geocoding
 │   ├── utils/
 │   │   ├── api.js                  ← fetchPlatform() with 10s timeout
-│   │   ├── divergence.js           ← calculateDivergence() — algorithmic, no AI
-│   │   ├── formatters.js           ← Rating display, date, text truncation
-│   │   └── sentimentColor.js       ← Rating → Tailwind color class
+│   │   ├── divergence.js           ← calculateDivergence() — 1.5+ star gap detection
+│   │   ├── platformRegions.js      ← getPlatformTiers(countryCode) — 7 platforms per region
+│   │   ├── formatters.js           ← Rating display, relative date, text truncation
+│   │   └── sentimentColor.js       ← Rating number → Tailwind color classes
 │   ├── constants/
-│   │   ├── platforms.js            ← PLATFORMS array (single source of truth)
+│   │   ├── platforms.js            ← PLATFORMS array — single source of truth for all platforms
+│   │   │                             integrated: true = queried; integrated: false = coming-soon only
 │   │   └── queryKeys.js            ← TanStack Query key factories
-│   └── store/uiStore.js            ← Zustand: selectedPlatforms, searchHistory, theme, location
+│   ├── store/
+│   │   └── uiStore.js              ← Zustand: selectedPlatforms, searchHistory (20), historyOpen, location
+│   └── test/
+│       ├── setup.js                ← @testing-library/jest-dom setup
+│       ├── platforms.test.js
+│       ├── platformRegions.test.js
+│       ├── platformGrid.test.js
+│       └── divergence.test.js
 └── workers/
     ├── wrangler.toml               ← name: hearsay-api, nodejs_compat
     └── src/
         ├── index.js                ← itty-router: OPTIONS first, 7 platform routes
         ├── routes/
-        │   ├── google.js           ← textsearch → Place Details (lat/lng support)
-        │   ├── yelp.js             ← Business Search → Reviews (lat/lng support)
-        │   ├── reddit.js           ← OAuth token (KV cached) → search + city subreddits
+        │   ├── google.js           ← textsearch → Place Details (lat/lng + city support)
+        │   ├── yelp.js             ← Business Search → Reviews (lat/lng + city support)
+        │   ├── reddit.js           ← OAuth token → search + city subreddits (no credentials yet)
         │   ├── youtube.js          ← Search → video details → commentThreads (2hr cache)
         │   ├── tripadvisor.js      ← SerpAPI (24hr cache)
         │   ├── facebook.js         ← SerpAPI fallback (24hr cache)
-        │   └── trustpilot.js       ← HTML fetch → JSON-LD extraction
+        │   └── trustpilot.js       ← HTML fetch → JSON-LD extraction (fragile)
         └── utils/
             ├── cors.js             ← corsHeaders, handleOptions(), addCorsHeaders()
             ├── cache.js            ← Cloudflare Cache API wrapper with TTL
-            └── errors.js           ← Standardized error response
-
+            └── errors.js           ← errorResponse() helper
 ```
 
 ---
 
-## Known Issues and Decisions
+## Known Issues
 
-- **Reddit**: Credentials not set. Reddit requires accepting a Responsible Builder Policy through their dev portal — the sign-up was blocked at the time of setup. The route is implemented and ready; just needs `REDDIT_CLIENT_ID` and `REDDIT_CLIENT_SECRET` added via wrangler.
-- **Trustpilot**: Scrapes JSON-LD from page HTML. Fragile — if Trustpilot changes markup or blocks the Worker's user agent, it breaks silently (returns empty, not error).
-- **Google textsearch**: Switched from `findplacefromtext` to `textsearch` — handles brand names ("Shake Shack") better. `findplacefromtext` returned empty for chain names without location.
-- **Yelp reviews**: API hard-limits to 3 reviews, 160 chars each. Listed in platform card note.
-- **SerpAPI budget**: 100 searches/month shared between TripAdvisor and Facebook. Both default to OFF. 24hr caching.
-- **YouTube units**: ~71 full queries/day budget. 2hr caching.
-
----
-
-## Current Build Phase
-
-**Phase 2 — In progress**. Site is live at https://parisa-singh.github.io/hearsay.
-
-**Completed in Phase 2**:
-- [x] Shared Layout.jsx with page fade-in transitions
-- [x] Regional platform chips (7 per region, coming-soon badges, stagger animation)
-- [x] Location reset wipe animation
-- [x] Search history sidebar (20 entries, right-side drawer)
-- [x] "REVIEW AGGREGATOR" label + updated hero copy
-- [x] About page Features section
-- [x] LinkedIn link in footer
-- [x] All integrated platforms selected by default
-- [x] Error/empty cards hidden from results
-- [x] Coming-soon chips in separate row below integrated chips
-
-**Phase 3 — Next**:
-- [ ] Reddit credentials (see Future API Work above)
-- [ ] Trustpilot fix (scraping breaks too often)
-- [ ] Foursquare API integration (US/EU regions)
-- [ ] Mobile responsive audit
-- [ ] Zomato API investigation
+- **Reddit**: No credentials — requires accepting Reddit Responsible Builder Policy at reddit.com/prefs/apps. Route is implemented and ready. Just needs secrets added.
+- **Trustpilot**: Scrapes JSON-LD from page HTML. Frequently blocked by Trustpilot's WAF. Returns empty silently (not error). Needs SerpAPI or official API approach.
+- **Yelp reviews**: Hard-limited to 3 reviews, 160 chars each by Yelp's API. Reviews endpoint sometimes returns 4xx for non-partner keys. Card shows a note explaining this.
+- **SerpAPI budget**: 100 searches/month shared between TripAdvisor and Facebook. Both are now default-enabled — monitor usage at serpapi.com/dashboard. 24hr caching reduces burn rate.
+- **YouTube quota**: ~71 full queries/day at free tier. 2hr caching. Avoid busting cache during dev.
+- **Google textsearch**: Switched from `findplacefromtext` to `textsearch` — handles brand/chain names much better.
+- **Lock file**: `package-lock.json` generated on Windows omits Linux-specific optional deps from native packages. CI uses `npm install` (not `npm ci`) to work around this.
+- **Zomato**: API deprecated 2020, website JS-rendered. Shown as coming-soon chip only.
+- **China platforms**: All 7 shown as coming-soon — require Chinese developer accounts/business registration.
 
 ---
 
@@ -288,6 +306,7 @@ hearsay/
 
 1. Read this file completely
 2. Run `git log --oneline -10` to see recent commits
-3. Check `cd workers && npx wrangler secret list` to verify secrets
-4. Run `npm run dev` to start the frontend locally
-5. Test a search on the live site: https://parisa-singh.github.io/hearsay
+3. Run `npm test` to confirm 34 tests still pass
+4. Run `npm run dev` to start the frontend locally (http://localhost:5173/hearsay/)
+5. Run `cd workers && npx wrangler secret list` to verify Worker secrets
+6. Check live site: https://parisa-singh.github.io/hearsay
