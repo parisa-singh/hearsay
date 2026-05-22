@@ -135,6 +135,15 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
         )}
       </div>
 
+      {/* Yelp API limitation note */}
+      {platform.id === 'yelp' && (
+        <p className="text-xs text-zinc-600 mt-3">
+          {reviews.length > 0
+            ? 'Yelp limits API previews to 3 snippets'
+            : 'Yelp review previews unavailable via API'}
+        </p>
+      )}
+
       {/* External link for non-YouTube platforms */}
       {!isYouTube && externalUrl && (
         <a
