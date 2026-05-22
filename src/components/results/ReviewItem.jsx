@@ -1,4 +1,7 @@
-import { truncateText, formatRelativeTime, starArray } from '../../utils/formatters'
+import { useState } from 'react'
+import { formatRelativeTime, starArray } from '../../utils/formatters'
+
+const SHORT_LIMIT = 120
 
 function StarRating({ rating, max = 5 }) {
   if (!rating) return null
@@ -6,12 +9,12 @@ function StarRating({ rating, max = 5 }) {
   return (
     <span className="flex items-center gap-0.5" aria-label={`${rating} out of ${max} stars`}>
       {Array(full).fill(null).map((_, i) => (
-        <svg key={`f${i}`} width="12" height="12" viewBox="0 0 24 24" fill="#FBBF24" className="text-amber-400">
+        <svg key={`f${i}`} width="12" height="12" viewBox="0 0 24 24" fill="#FBBF24">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
         </svg>
       ))}
       {half === 1 && (
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="#FBBF24" className="text-amber-400">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="#FBBF24">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77V2z"/>
         </svg>
       )}
@@ -25,7 +28,11 @@ function StarRating({ rating, max = 5 }) {
 }
 
 export default function ReviewItem({ review }) {
-  const { text, rating, author, date, url } = review
+  const { text, rating, author, date } = review
+  const [expanded, setExpanded] = useState(false)
+
+  const isLong = text.length > SHORT_LIMIT
+  const displayText = expanded || !isLong ? text : text.slice(0, SHORT_LIMIT).trimEnd() + '…'
 
   return (
     <div className="py-3 border-b border-zinc-800 last:border-0">
@@ -37,18 +44,16 @@ export default function ReviewItem({ review }) {
         {date && <span className="text-xs text-zinc-600">{formatRelativeTime(date)}</span>}
       </div>
       <p className="text-sm text-zinc-300 leading-relaxed">
-        {truncateText(text, 220)}
+        {displayText}
+        {isLong && (
+          <button
+            onClick={() => setExpanded(e => !e)}
+            className="ml-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+          >
+            {expanded ? 'Show less' : 'Show more'}
+          </button>
+        )}
       </p>
-      {url && (
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors mt-1 inline-block"
-        >
-          Read full →
-        </a>
-      )}
     </div>
   )
 }

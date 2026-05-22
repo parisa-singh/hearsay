@@ -37,20 +37,28 @@ function PlatformCardError({ platform, error }) {
   )
 }
 
-export default function PlatformCard({ platformId, data, isLoading, isError, error }) {
+function getSeeMoreUrl(platform, data, query) {
+  if (data?.sourceUrl) return data.sourceUrl
+  if (platform.id === 'reddit') return `https://www.reddit.com/search?q=${encodeURIComponent(query + ' review')}&sort=relevance`
+  if (platform.id === 'youtube') return `https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' review')}`
+  return null
+}
+
+export default function PlatformCard({ platformId, data, isLoading, isError, error, query }) {
   const platform = PLATFORM_MAP[platformId]
   if (!platform) return null
 
   if (isLoading) return <PlatformCardSkeleton />
   if (isError || !data) return <PlatformCardError platform={platform} error={error} />
 
-  const { rating, reviewCount, reviews = [], sourceUrl } = data
+  const { rating, reviewCount, reviews = [] } = data
   const colors = sentimentColor(rating)
   const label = platform.label ?? platform.displayName
+  const seeMoreUrl = getSeeMoreUrl(platform, data, query ?? '')
 
   return (
     <div
-      className="rounded-xl border bg-zinc-900 p-5 transition-all duration-300 animate-slide-up hover:border-zinc-700"
+      className="rounded-xl border bg-zinc-900 p-5 transition-all duration-300 animate-slide-up hover:border-zinc-700 flex flex-col"
       style={{ borderColor: `${platform.brandColor}30` }}
     >
       {/* Header */}
@@ -87,21 +95,8 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
         )}
       </div>
 
-      {/* Platform-specific source link */}
-      {sourceUrl && (
-        <a
-          href={sourceUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors mb-3 inline-block"
-          style={{ color: platform.brandColor + '99' }}
-        >
-          View on {platform.displayName} →
-        </a>
-      )}
-
       {/* Reviews */}
-      <div>
+      <div className="flex-1">
         {reviews.length === 0 ? (
           <p className="text-sm text-zinc-600 py-2">No reviews found for this search.</p>
         ) : (
@@ -110,6 +105,22 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
           ))
         )}
       </div>
+
+      {/* See more reviews link */}
+      {seeMoreUrl && (
+        <a
+          href={seeMoreUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 text-xs font-medium transition-colors hover:opacity-80 inline-flex items-center gap-1"
+          style={{ color: platform.brandColor }}
+        >
+          See more reviews on {platform.displayName}
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>
+          </svg>
+        </a>
+      )}
     </div>
   )
 }

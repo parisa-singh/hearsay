@@ -17,27 +17,32 @@ export async function googleHandler(request, env) {
   if (cached) return Response.json(cached)
 
   try {
-    // Step 1: Find place
-    const findParams = new URLSearchParams({
-      input: query,
-      inputtype: 'textquery',
-      fields: 'place_id,name',
+    // textsearch handles brand names ("Shake Shack") better than findplacefromtext
+    const searchParams2 = new URLSearchParams({
+      query,
       key: env.GOOGLE_API_KEY,
+      language: 'en',
     })
     if (lat && lng) {
-      findParams.set('locationbias', `circle:50000@${lat},${lng}`)
+      searchParams2.set('location', `${lat},${lng}`)
+      searchParams2.set('radius', '50000')
     }
 
-    const findRes = await fetch(`${PLACES_BASE}/findplacefromtext/json?${findParams}`)
-    const findData = await findRes.json()
-    const placeId = findData.candidates?.[0]?.place_id
-    if (!placeId) {
+    const searchRes = await fetch(`${PLACES_BASE}/textsearch/json?${searchParams2}`)
+    const searchData = await searchRes.json()
+
+    if (searchData.status === 'REQUEST_DENIED' || searchData.status === 'INVALID_REQUEST') {
+      return errorResponse(`Google API error: ${searchData.error_message ?? searchData.status}`)
+    }
+
+    const place = searchData.results?.[0]
+    if (!place) {
       return Response.json({ platform: 'google', reviews: [], reviewCount: null, rating: null })
     }
 
-    // Step 2: Get place details with reviews
+    // Fetch reviews via Place Details
     const detailParams = new URLSearchParams({
-      place_id: placeId,
+      place_id: place.place_id,
       fields: 'name,rating,user_ratings_total,reviews,url',
       key: env.GOOGLE_API_KEY,
       language: 'en',
@@ -48,9 +53,9 @@ export async function googleHandler(request, env) {
 
     const response = {
       platform: 'google',
-      name: result.name ?? query,
-      rating: result.rating ?? null,
-      reviewCount: result.user_ratings_total ?? null,
+      name: result.name ?? place.name ?? query,
+      rating: result.rating ?? place.rating ?? null,
+      reviewCount: result.user_ratings_total ?? place.user_ratings_total ?? null,
       sourceUrl: result.url ?? null,
       reviews: (result.reviews ?? []).slice(0, 5).map(r => ({
         text: r.text ?? '',

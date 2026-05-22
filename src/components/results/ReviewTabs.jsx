@@ -11,7 +11,7 @@ export default function ReviewTabs({ globalResults, localResults, query, locatio
   const localIsLoading = localResults?.some(r => r.isLoading)
 
   if (!hasLocation) {
-    return <PlatformGrid results={globalResults} />
+    return <PlatformGrid results={globalResults} query={query} />
   }
 
   return (
@@ -32,12 +32,12 @@ export default function ReviewTabs({ globalResults, localResults, query, locatio
         />
       </div>
 
-      {activeTab === 'global' && <PlatformGrid results={globalResults} />}
+      {activeTab === 'global' && <PlatformGrid results={globalResults} query={query} />}
 
       {activeTab === 'local' && (
         !localIsLoading && !localHasData
           ? <LocalEmptyState query={query} city={location.city} />
-          : <PlatformGrid results={localResults ?? globalResults} />
+          : <PlatformGrid results={localResults ?? globalResults} query={query} />
       )}
     </div>
   )
