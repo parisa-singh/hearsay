@@ -85,17 +85,58 @@ REDDIT_CLIENT_SECRET — Reddit app client secret (skipped for now)
 
 ---
 
-## Platform Status (as of Phase 1 completion)
+## Platform Status
 
 | Platform | Status | Notes |
 |---|---|---|
 | Google | Working | textsearch → Place Details |
-| Yelp | Working | 3 reviews max, 160-char truncation by Yelp API |
+| Yelp | Working | 3 reviews max, 160-char truncation enforced by Yelp API. Reviews endpoint sometimes returns 4xx for non-partner keys — card shows rating but no reviews text. |
 | YouTube | Working | Comments + video descriptions as review signal |
-| Reddit | Broken | No credentials — Reddit policy acceptance blocked sign-up |
-| TripAdvisor | Working (off by default) | SerpAPI; 24hr cache; user must toggle on |
-| Facebook | Working (off by default) | SerpAPI fallback; labeled "Mentions"; user must toggle on |
-| Trustpilot | Partially | JSON-LD scraping; may fail if Trustpilot blocks fetch |
+| Reddit | Not working | No credentials — Reddit policy acceptance blocked sign-up. Route implemented, needs REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET |
+| TripAdvisor | Working | SerpAPI; 24hr cache |
+| Facebook | Working | SerpAPI fallback; labeled "Mentions"; 24hr cache |
+| Trustpilot | Broken/partial | JSON-LD scraping from Trustpilot HTML. Frequently fails — Trustpilot blocks Workers' user agent or changes markup. Needs a real API approach. |
+| Zomato | Not started | API deprecated 2020. Website is JS-rendered, scraping blocked. Needs a real partnership/API key or alternative approach. Currently coming-soon. |
+
+## Future API Work (Priority Order)
+
+These platforms are shown as "coming soon" in the UI. Implementation details:
+
+### Reddit
+- Route: `workers/src/routes/reddit.js` — fully implemented
+- Needs: Accept Reddit Responsible Builder Policy at reddit.com/dev, then `wrangler secret put REDDIT_CLIENT_ID` and `wrangler secret put REDDIT_CLIENT_SECRET`
+- No code changes required — just credentials
+
+### Trustpilot
+- Route: `workers/src/routes/trustpilot.js` — JSON-LD scraping, fragile
+- Problem: Trustpilot blocks Cloudflare Worker user agents; markup changes break extraction
+- Fix options: (1) Use Trustpilot's official Business API (requires business account), (2) SerpAPI has a Trustpilot engine, (3) Keep scraping but add better error handling and fallback
+
+### Zomato
+- No route yet. Zomato's public API was deprecated in 2020.
+- Fix options: (1) Zomato Developer API (requires application + approval via developers.zomato.com), (2) SerpAPI may index Zomato results
+- Currently shown as coming-soon chip in India/Middle East regional views
+
+### JustDial, Magicpin (India)
+- No routes. No public APIs available.
+- Would require web scraping or partnership — low priority
+
+### OpenTable, Foursquare (US/EU)
+- OpenTable: Has an affiliate API but requires partnership approval
+- Foursquare: Has Places API (free tier) — most actionable next step for US/EU regions
+
+### TheFork, Michelin (Europe)
+- TheFork: No public API. Web scraping possible but fragile.
+- Michelin: No public API. Static data (Michelin star status) could be hardcoded.
+
+### GrabFood, Agoda, Wongnai, Chope (SE Asia)
+- All require local developer accounts or partnerships. Low priority.
+
+### China platforms (Dianping, Meituan, Baidu Maps, Gaode, Xiaohongshu, WeChat)
+- All require Chinese developer accounts/business registration. Not feasible without local entity.
+
+### Talabat, Rappi, Degusta (Middle East / LATAM)
+- No public APIs. Low priority.
 
 ---
 
@@ -220,15 +261,26 @@ hearsay/
 
 ## Current Build Phase
 
-**Phase 1 — Complete**. Site is live at https://parisa-singh.github.io/hearsay.
+**Phase 2 — In progress**. Site is live at https://parisa-singh.github.io/hearsay.
 
-**Phase 2 — Next**:
-- [ ] Polish UI: loading skeletons, entrance animations
+**Completed in Phase 2**:
+- [x] Shared Layout.jsx with page fade-in transitions
+- [x] Regional platform chips (7 per region, coming-soon badges, stagger animation)
+- [x] Location reset wipe animation
+- [x] Search history sidebar (20 entries, right-side drawer)
+- [x] "REVIEW AGGREGATOR" label + updated hero copy
+- [x] About page Features section
+- [x] LinkedIn link in footer
+- [x] All integrated platforms selected by default
+- [x] Error/empty cards hidden from results
+- [x] Coming-soon chips in separate row below integrated chips
+
+**Phase 3 — Next**:
+- [ ] Reddit credentials (see Future API Work above)
+- [ ] Trustpilot fix (scraping breaks too often)
+- [ ] Foursquare API integration (US/EU regions)
 - [ ] Mobile responsive audit
-- [ ] Search history (last 5 queries, already in Zustand)
-- [ ] AboutPage content
-- [ ] Dark/light mode toggle
-- [ ] Try Reddit credentials again
+- [ ] Zomato API investigation
 
 ---
 

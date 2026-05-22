@@ -11,7 +11,11 @@ function platformSortScore(r) {
 export default function PlatformGrid({ results, query }) {
   if (!results || results.length === 0) return null
 
-  const sorted = [...results].sort((a, b) => platformSortScore(a) - platformSortScore(b))
+  const visible = results.filter(r =>
+    r.isLoading || (!r.isError && (r.data?.rating != null || (r.data?.reviews?.length ?? 0) > 0))
+  )
+
+  const sorted = [...visible].sort((a, b) => platformSortScore(a) - platformSortScore(b))
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
