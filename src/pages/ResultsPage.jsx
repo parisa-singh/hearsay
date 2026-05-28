@@ -4,6 +4,7 @@ import SearchBar from '../components/search/SearchBar'
 import DivergenceAlert from '../components/results/DivergenceAlert'
 import ReviewTabs from '../components/results/ReviewTabs'
 import ComparisonChart from '../components/results/ComparisonChart'
+import MediaCard from '../components/results/MediaCard'
 import { useAllPlatforms } from '../hooks/useAllPlatforms'
 import { useUIStore } from '../store/uiStore'
 import { calculateDivergence } from '../utils/divergence'
@@ -52,6 +53,9 @@ export default function ResultsPage() {
       {ratedResults.length >= 2 && !isAnyLoading && (
         <ComparisonChart results={ratedResults} />
       )}
+
+      {/* Media card — videos and photos above review grid */}
+      <MediaCard results={results} />
 
       {/* Platform cards */}
       <ReviewTabs

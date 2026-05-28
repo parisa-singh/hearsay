@@ -113,6 +113,7 @@ export async function youtubeHandler(request, env) {
       const stats = statsMap[v.id?.videoId]
       return {
         text: v.snippet?.description?.slice(0, 300) ?? v.snippet?.title ?? '',
+        videoTitle: v.snippet?.title ?? null,
         rating: null,
         author: v.snippet?.channelTitle ?? null,
         date: v.snippet?.publishedAt ?? null,

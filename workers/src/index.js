@@ -23,6 +23,23 @@ router.get('/tripadvisor', tripadvisorHandler)
 router.get('/facebook', facebookHandler)
 router.get('/trustpilot', trustpilotHandler)
 
+// Google photo proxy — keeps API key server-side, resolves Places photo redirect
+router.get('/google-photo', async (request, env) => {
+  const { searchParams } = new URL(request.url)
+  const ref = searchParams.get('ref')
+  if (!ref) return new Response('Missing ref', { status: 400 })
+  const res = await fetch(
+    `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${encodeURIComponent(ref)}&key=${env.GOOGLE_API_KEY}`,
+    { redirect: 'manual' }
+  )
+  const location = res.headers.get('location')
+  if (!location) return new Response('Photo not found', { status: 404 })
+  return new Response(null, {
+    status: 302,
+    headers: { Location: location, 'Cache-Control': 'public, max-age=86400' },
+  })
+})
+
 // Health check
 router.get('/', () => Response.json({ status: 'ok', service: 'hearsay-api' }))
 

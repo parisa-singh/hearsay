@@ -49,7 +49,7 @@ export async function googleHandler(request, env) {
     // Fetch reviews via Place Details
     const detailParams = new URLSearchParams({
       place_id: place.place_id,
-      fields: 'name,rating,user_ratings_total,reviews,url',
+      fields: 'name,rating,user_ratings_total,reviews,url,photos',
       key: env.GOOGLE_API_KEY,
       language: 'en',
     })
@@ -57,12 +57,16 @@ export async function googleHandler(request, env) {
     const detailData = await detailRes.json()
     const result = detailData.result ?? {}
 
+    const workerOrigin = new URL(request.url).origin
     const response = {
       platform: 'google',
       name: result.name ?? place.name ?? query,
       rating: result.rating ?? place.rating ?? null,
       reviewCount: result.user_ratings_total ?? place.user_ratings_total ?? null,
       sourceUrl: result.url ?? null,
+      photos: (result.photos ?? []).slice(0, 3).map(p => ({
+        url: `${workerOrigin}/google-photo?ref=${encodeURIComponent(p.photo_reference)}`,
+      })),
       reviews: (result.reviews ?? []).slice(0, 5).map(r => ({
         text: r.text ?? '',
         rating: r.rating ?? null,
