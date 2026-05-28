@@ -5,23 +5,46 @@ import { filterReviewsForCategory } from '../utils/relevanceFilter.js'
 const SERPAPI_BASE = 'https://serpapi.com/search'
 const CACHE_TTL = 24 * 3600
 
+// Trustpilot covers online businesses, products, and services (and travel
+// businesses/hotels under "place"). It has no meaningful data for individual
+// restaurants, so that category is gated out — the inverse of TripAdvisor.
+function buildSearchQuery(query, city, category) {
+  switch (category) {
+    case 'product':
+      return `${query} review`
+    case 'place':
+      return city ? `${query} ${city}` : query
+    case 'business':
+      return `${query} review`
+    default:
+      return query
+  }
+}
+
 export async function trustpilotHandler(request, env) {
   const { searchParams } = new URL(request.url)
   const query = searchParams.get('query')
+  const city = searchParams.get('city')
   const category = searchParams.get('category')
   const nocache = searchParams.get('nocache') === '1'
 
   if (!query) return errorResponse('Missing query parameter', 400)
 
-  // Use a versioned cache key so old HTML-scraped results aren't served
-  const cacheKey = `trustpilot:v2:${query}`
+  if (category === 'restaurant') {
+    return Response.json({ platform: 'trustpilot', reviews: [], reviewCount: null, rating: null })
+  }
+
+  const searchQuery = buildSearchQuery(query, city, category)
+  // Versioned + category-scoped key: the response is filtered per category, so
+  // category must be part of the key or cross-category requests collide.
+  const cacheKey = `trustpilot:v3:${category ?? 'any'}:${searchQuery}`
   const cached = await getCached(cacheKey, nocache)
   if (cached) return Response.json(cached)
 
   try {
     const params = new URLSearchParams({
       engine: 'google',
-      q: `${query} site:trustpilot.com reviews`,
+      q: `${searchQuery} site:trustpilot.com reviews`,
       api_key: env.SERPAPI_KEY,
       num: '5',
     })
