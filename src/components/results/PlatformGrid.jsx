@@ -25,6 +25,14 @@ export default function PlatformGrid({ results, query }) {
 
   return (
     <div className="space-y-4">
+      {/* Yelp at the top — full-width horizontal card */}
+      {yelpResult && (
+        <YelpWideCard
+          platform={yelpResult.platform}
+          data={yelpResult.data}
+        />
+      )}
+
       {gridResults.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
           {gridResults.map(({ platform, data, isLoading, isError, error }) => (
@@ -39,13 +47,6 @@ export default function PlatformGrid({ results, query }) {
             />
           ))}
         </div>
-      )}
-
-      {yelpResult && (
-        <YelpWideCard
-          platform={yelpResult.platform}
-          data={yelpResult.data}
-        />
       )}
     </div>
   )

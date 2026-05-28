@@ -1,5 +1,6 @@
 import { getCached, setCached } from '../utils/cache.js'
 import { errorResponse } from '../utils/errors.js'
+import { filterReviewsForCategory } from '../utils/relevanceFilter.js'
 
 const YT_BASE = 'https://www.googleapis.com/youtube/v3'
 const CACHE_TTL = 2 * 3600
@@ -121,12 +122,13 @@ export async function youtubeHandler(request, env) {
       }
     })
 
+    const rawReviews = [...allComments, ...videoReviews].slice(0, 8)
     const response = {
       platform: 'youtube',
       name: query,
       rating: null,
       reviewCount: videos.length,
-      reviews: [...allComments, ...videoReviews].slice(0, 8),
+      reviews: filterReviewsForCategory(rawReviews, category),
     }
 
     await setCached(cacheKey, response, CACHE_TTL)

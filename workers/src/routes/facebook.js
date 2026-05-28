@@ -1,5 +1,6 @@
 import { getCached, setCached } from '../utils/cache.js'
 import { errorResponse } from '../utils/errors.js'
+import { filterReviewsForCategory } from '../utils/relevanceFilter.js'
 
 const SERPAPI_BASE = 'https://serpapi.com/search'
 const CACHE_TTL = 24 * 3600
@@ -46,13 +47,16 @@ export async function facebookHandler(request, env) {
       r.link?.includes('facebook.com')
     )
 
-    const reviews = results.slice(0, 4).map(r => ({
-      text: r.snippet ?? r.title ?? '',
-      rating: null,
-      author: null,
-      date: null,
-      url: r.link ?? null,
-    }))
+    const reviews = filterReviewsForCategory(
+      results.slice(0, 4).map(r => ({
+        text: r.snippet ?? r.title ?? '',
+        rating: null,
+        author: null,
+        date: null,
+        url: r.link ?? null,
+      })),
+      category
+    )
 
     const response = {
       platform: 'facebook',

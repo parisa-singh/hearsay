@@ -1,11 +1,13 @@
 import { getCached, setCached } from '../utils/cache.js'
 import { errorResponse } from '../utils/errors.js'
+import { filterReviewsForCategory } from '../utils/relevanceFilter.js'
 
 const CACHE_TTL = 12 * 3600 // 12hr
 
 export async function trustpilotHandler(request, env) {
   const { searchParams } = new URL(request.url)
   const query = searchParams.get('query')
+  const category = searchParams.get('category')
 
   if (!query) return errorResponse('Missing query parameter', 400)
 
@@ -48,12 +50,15 @@ export async function trustpilotHandler(request, env) {
       rating: aggregateRating.ratingValue ? parseFloat(aggregateRating.ratingValue) : null,
       reviewCount: aggregateRating.reviewCount ?? null,
       sourceUrl: `https://www.trustpilot.com/review/${businessSlug}`,
-      reviews: reviewItems.slice(0, 5).map(r => ({
-        text: r.reviewBody ?? '',
-        rating: r.reviewRating?.ratingValue ?? null,
-        author: r.author?.name ?? null,
-        date: r.datePublished ?? null,
-      })),
+      reviews: filterReviewsForCategory(
+        reviewItems.slice(0, 5).map(r => ({
+          text: r.reviewBody ?? '',
+          rating: r.reviewRating?.ratingValue ?? null,
+          author: r.author?.name ?? null,
+          date: r.datePublished ?? null,
+        })),
+        category
+      ),
     }
 
     await setCached(cacheKey, response, CACHE_TTL)
