@@ -25,11 +25,31 @@ export default function SearchBar({ initialValue = '', initialCategory = null, c
     navigate(`/results?q=${encodeURIComponent(q)}&category=${encodeURIComponent(category)}`)
   }
 
-  const pillBase = compact ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm'
+  const pillPad = compact ? 'px-3 py-1 text-xs' : 'px-4 py-1.5 text-sm'
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
       <div className={`flex flex-col gap-3 ${compact ? '' : 'max-w-2xl mx-auto'}`}>
+        {/* Category pills */}
+        <div className="flex flex-wrap gap-2">
+          {CATEGORIES.map(c => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => setCategory(prev => prev === c.id ? null : c.id)}
+              className={`
+                ${pillPad} rounded-full border font-medium transition-all duration-150
+                ${category === c.id
+                  ? 'border-white bg-white text-zinc-900 shadow-sm'
+                  : 'border-zinc-600 bg-zinc-800 text-zinc-300 hover:border-zinc-400 hover:text-white'
+                }
+              `}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+
         {/* Input + submit */}
         <div className="relative flex items-center gap-2">
           <div className="relative flex-1">
@@ -70,30 +90,19 @@ export default function SearchBar({ initialValue = '', initialCategory = null, c
           </button>
         </div>
 
-        {/* Category pills */}
-        <div className="flex flex-wrap gap-2">
-          {CATEGORIES.map(c => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => setCategory(prev => prev === c.id ? null : c.id)}
-              className={`
-                ${pillBase} rounded-full border font-medium transition-all duration-150
-                ${category === c.id
-                  ? 'border-white/30 bg-white/10 text-white'
-                  : 'border-zinc-700 bg-zinc-900 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300'
-                }
-              `}
-            >
-              {c.label}
-            </button>
-          ))}
-          {value.trim() && !category && (
-            <span className="self-center text-xs text-zinc-600 ml-1">
-              Select a category to search
+        {/* Category required notification */}
+        {value.trim() && !category && (
+          <div className="flex items-center gap-2.5 px-4 py-3 rounded-lg bg-amber-950/70 border border-amber-700/70">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-amber-400">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span className="text-sm font-medium text-amber-300">
+              Select a category above to enable search
             </span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </form>
   )

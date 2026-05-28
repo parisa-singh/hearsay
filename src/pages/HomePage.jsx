@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import SearchBar from '../components/search/SearchBar'
 import PlatformToggle from '../components/search/PlatformToggle'
 import LocationBadge from '../components/search/LocationBadge'
@@ -25,17 +26,23 @@ function itemHref(item) {
 }
 
 export default function HomePage() {
-  const { searchHistory, setHistoryOpen } = useUIStore()
+  const { searchHistory, setHistoryOpen, clearHistory } = useUIStore()
+  const [confirmClear, setConfirmClear] = useState(false)
   const integratedPlatforms = PLATFORMS.filter(p => p.integrated)
   const normalizedHistory = searchHistory.map(normalizeItem)
+
+  function handleClearHistory() {
+    clearHistory()
+    setConfirmClear(false)
+  }
 
   return (
     <main className="flex-1 flex flex-col items-center justify-center px-4 py-16">
       <SearchHistorySidebar />
 
       {/* Hero */}
-      <div className="text-center mb-10 max-w-2xl">
-        <p className="text-xs font-semibold tracking-widest text-zinc-600 uppercase mb-4">
+      <div className="text-center mb-8 max-w-2xl">
+        <p className="text-xs font-semibold tracking-widest text-zinc-500 uppercase mb-4">
           Review Aggregator
         </p>
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-white mb-4">
@@ -51,28 +58,33 @@ export default function HomePage() {
         </p>
       </div>
 
-      {/* Search */}
+      {/* Search block */}
       <div className="w-full max-w-2xl space-y-4">
-        <SearchBar />
-        <div className="flex flex-col items-center gap-3">
+        {/* Location — above search bar */}
+        <div className="flex justify-center">
           <LocationBadge />
-          <div className="w-full">
-            <p className="text-xs text-zinc-600 text-center mb-2">Pull from</p>
-            <PlatformToggle />
-          </div>
+        </div>
+
+        {/* Search bar with category pills */}
+        <SearchBar />
+
+        {/* Platform toggles — below search bar */}
+        <div className="pt-1">
+          <p className="text-xs text-zinc-500 text-center mb-2">Pull from</p>
+          <PlatformToggle />
         </div>
       </div>
 
       {/* Example / recent searches */}
       {normalizedHistory.length === 0 ? (
         <div className="mt-8 text-center">
-          <p className="text-xs text-zinc-600 mb-3">Try searching for</p>
+          <p className="text-xs text-zinc-500 mb-3">Try searching for</p>
           <div className="flex flex-wrap gap-2 justify-center">
             {EXAMPLE_SEARCHES.map(ex => (
               <a
                 key={ex.q}
                 href={itemHref(ex)}
-                className="px-3 py-1.5 rounded-full text-sm text-zinc-400 border border-zinc-800 hover:border-zinc-600 hover:text-zinc-200 transition-all"
+                className="px-3 py-1.5 rounded-full text-sm text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:text-white transition-all"
               >
                 {ex.q}
               </a>
@@ -80,22 +92,36 @@ export default function HomePage() {
           </div>
         </div>
       ) : (
-        <div className="mt-8 text-center">
+        <div className="mt-8 text-center w-full max-w-2xl">
           <div className="flex items-center justify-center gap-3 mb-3">
-            <p className="text-xs text-zinc-600">Recent searches</p>
+            <p className="text-sm font-medium text-zinc-300">Recent searches</p>
             <button
               onClick={() => setHistoryOpen(true)}
-              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors underline underline-offset-2"
+              className="text-xs text-zinc-400 hover:text-white transition-colors underline underline-offset-2"
             >
               View all →
             </button>
+            {confirmClear ? (
+              <span className="flex items-center gap-2 text-xs">
+                <span className="text-zinc-400">Delete all?</span>
+                <button onClick={handleClearHistory} className="text-red-400 hover:text-red-300 font-medium transition-colors">Yes</button>
+                <button onClick={() => setConfirmClear(false)} className="text-zinc-400 hover:text-zinc-200 transition-colors">No</button>
+              </span>
+            ) : (
+              <button
+                onClick={() => setConfirmClear(true)}
+                className="text-xs text-zinc-500 hover:text-red-400 transition-colors"
+              >
+                Clear all
+              </button>
+            )}
           </div>
           <div className="flex flex-wrap gap-2 justify-center">
             {normalizedHistory.slice(0, 5).map(item => (
               <a
                 key={item.q}
                 href={itemHref(item)}
-                className="px-3 py-1.5 rounded-full text-sm text-zinc-400 border border-zinc-800 hover:border-zinc-600 hover:text-zinc-200 transition-all"
+                className="px-3 py-1.5 rounded-full text-sm text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:text-white transition-all"
               >
                 {item.q}
               </a>
@@ -104,22 +130,25 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Platform logos strip */}
-      <div className="mt-16 text-center">
-        <p className="text-xs text-zinc-700 mb-4 uppercase tracking-wider">Sources</p>
-        <div className="flex items-center justify-center gap-6 flex-wrap opacity-40">
-          {integratedPlatforms.map(p => (
-            <img
-              key={p.id}
-              src={p.logo}
-              alt={p.displayName}
-              width={24}
-              height={24}
-              title={p.displayName}
-              className="grayscale"
-              onError={e => { e.target.style.display = 'none' }}
-            />
-          ))}
+      {/* Available platforms strip */}
+      <div className="mt-14 w-full max-w-2xl">
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-6 py-4">
+          <p className="text-xs text-zinc-500 text-center mb-3 uppercase tracking-wider">Sources</p>
+          <div className="flex items-center justify-center gap-5 flex-wrap">
+            {integratedPlatforms.map(p => (
+              <div key={p.id} className="flex items-center gap-1.5 opacity-50">
+                <img
+                  src={p.logo}
+                  alt={p.displayName}
+                  width={16}
+                  height={16}
+                  className="grayscale"
+                  onError={e => { e.target.style.display = 'none' }}
+                />
+                <span className="text-xs text-zinc-500">{p.displayName}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </main>

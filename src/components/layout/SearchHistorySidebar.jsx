@@ -36,12 +36,12 @@ export default function SearchHistorySidebar() {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-zinc-950/60"
+        className="fixed inset-0 z-40 bg-zinc-950/70"
         onClick={() => { setHistoryOpen(false); setConfirmItem(null); setConfirmClearAll(false) }}
       />
 
       {/* Drawer */}
-      <div className="fixed right-0 top-0 h-full w-80 z-50 bg-zinc-900 border-l border-zinc-800 flex flex-col"
+      <div className="fixed right-0 top-0 h-full w-80 z-50 bg-zinc-900 border-l border-zinc-700 flex flex-col"
         style={{ animation: 'slideInRight 300ms ease-out' }}
       >
         <style>{`
@@ -52,11 +52,11 @@ export default function SearchHistorySidebar() {
         `}</style>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-4 border-b border-zinc-800">
-          <h2 className="text-sm font-medium text-zinc-200">Recent searches</h2>
+        <div className="flex items-center justify-between px-4 py-4 border-b border-zinc-700">
+          <h2 className="text-sm font-semibold text-zinc-100">Search history</h2>
           <button
             onClick={() => setHistoryOpen(false)}
-            className="p-1 text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-lg transition-all"
             aria-label="Close"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -67,54 +67,54 @@ export default function SearchHistorySidebar() {
         </div>
 
         {/* List */}
-        <div className="flex-1 overflow-y-auto py-2">
+        <div className="flex-1 overflow-y-auto py-1">
           {items.length === 0 ? (
-            <p className="text-sm text-zinc-600 text-center py-8">No searches yet</p>
+            <p className="text-sm text-zinc-400 text-center py-10">No searches yet</p>
           ) : (
             items.map(item => (
               confirmItem === item.q ? (
-                <div key={item.q} className="px-4 py-3 bg-zinc-800/50 border-b border-zinc-800">
-                  <p className="text-xs text-zinc-300 truncate mb-1">
-                    Delete <span className="font-medium">"{item.q}"</span>?
+                <div key={item.q} className="px-4 py-3 bg-red-950/30 border-b border-red-900/40">
+                  <p className="text-sm text-zinc-200 font-medium truncate mb-0.5">
+                    Delete "{item.q}"?
                   </p>
-                  <p className="text-xs text-zinc-600 mb-2">This permanently removes it from your history.</p>
-                  <div className="flex items-center gap-3">
+                  <p className="text-xs text-zinc-400 mb-3">This permanently removes it from your history and cannot be undone.</p>
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleDeleteItem(item.q)}
-                      className="text-xs font-medium text-red-400 hover:text-red-300 transition-colors"
+                      className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold transition-colors"
                     >
                       Delete permanently
                     </button>
                     <button
                       onClick={() => setConfirmItem(null)}
-                      className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                      className="px-3 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 hover:text-white hover:border-zinc-500 text-xs font-medium transition-colors"
                     >
                       Cancel
                     </button>
                   </div>
                 </div>
               ) : (
-                <div key={item.q} className="group flex items-center gap-1 px-4 py-2.5 hover:bg-zinc-800/60 transition-colors">
+                <div key={item.q} className="group flex items-center gap-1 px-4 py-3 hover:bg-zinc-800 transition-colors border-b border-zinc-800/60">
                   <a
                     href={itemHref(item)}
                     onClick={() => setHistoryOpen(false)}
-                    className="flex items-center gap-3 flex-1 min-w-0 text-sm text-zinc-400 group-hover:text-zinc-200 transition-colors"
+                    className="flex items-center gap-3 flex-1 min-w-0"
                   >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-zinc-600">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-zinc-500">
                       <circle cx="11" cy="11" r="8"/>
                       <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
-                    <span className="truncate">{item.q}</span>
+                    <span className="truncate text-sm text-zinc-200 group-hover:text-white transition-colors">{item.q}</span>
                     {item.category && (
-                      <span className="text-xs text-zinc-600 shrink-0 capitalize">{item.category}</span>
+                      <span className="text-xs text-zinc-400 bg-zinc-700 px-1.5 py-0.5 rounded shrink-0 capitalize">{item.category}</span>
                     )}
                   </a>
                   <button
                     onClick={() => setConfirmItem(item.q)}
-                    className="shrink-0 p-1 text-zinc-700 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                    className="shrink-0 p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-all"
                     aria-label={`Delete "${item.q}"`}
                   >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <polyline points="3 6 5 6 21 6"/>
                       <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
                       <path d="M10 11v6M14 11v6"/>
@@ -127,39 +127,46 @@ export default function SearchHistorySidebar() {
           )}
         </div>
 
-        {/* Footer */}
-        {items.length > 0 && (
-          <div className="px-4 py-3 border-t border-zinc-800">
-            {confirmClearAll ? (
-              <div>
-                <p className="text-xs text-zinc-400 mb-2">
-                  Permanently delete all {items.length} searches? This cannot be undone.
-                </p>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={handleClearAll}
-                    className="text-xs font-medium text-red-400 hover:text-red-300 transition-colors"
-                  >
-                    Delete all permanently
-                  </button>
-                  <button
-                    onClick={() => setConfirmClearAll(false)}
-                    className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
+        {/* Footer — Clear All */}
+        <div className="px-4 py-4 border-t border-zinc-700">
+          {confirmClearAll ? (
+            <div className="rounded-lg bg-red-950/40 border border-red-800/60 p-3">
+              <p className="text-sm text-zinc-200 font-medium mb-1">
+                Delete all {items.length} searches?
+              </p>
+              <p className="text-xs text-zinc-400 mb-3">This is permanent and cannot be undone.</p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleClearAll}
+                  className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold transition-colors"
+                >
+                  Delete all permanently
+                </button>
+                <button
+                  onClick={() => setConfirmClearAll(false)}
+                  className="px-3 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 hover:text-white text-xs font-medium transition-colors"
+                >
+                  Cancel
+                </button>
               </div>
-            ) : (
+            </div>
+          ) : (
+            items.length > 0 && (
               <button
                 onClick={() => setConfirmClearAll(true)}
-                className="text-xs text-zinc-600 hover:text-red-400 transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-red-700 hover:text-red-400 hover:bg-red-950/20 transition-all"
               >
-                Clear all
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                  <path d="M10 11v6M14 11v6"/>
+                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                </svg>
+                Clear all history
               </button>
-            )}
-          </div>
-        )}
+            )
+          )}
+        </div>
       </div>
     </>
   )

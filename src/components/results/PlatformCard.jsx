@@ -39,56 +39,62 @@ function PlatformCardError({ platform, error }) {
   )
 }
 
-function YelpCompactCard({ platform, data }) {
+export function YelpWideCard({ platform, data }) {
   const { rating, reviewCount, sourceUrl } = data ?? {}
   const colors = sentimentColor(rating)
 
   return (
     <div
-      className="rounded-xl border bg-zinc-900 p-4 transition-all duration-300 animate-slide-up hover:border-zinc-700 flex flex-col gap-3"
-      style={{ borderColor: `${platform.brandColor}30` }}
+      className="rounded-xl border bg-zinc-900 px-5 py-4 flex flex-wrap sm:flex-nowrap items-center gap-4 transition-all duration-300 animate-slide-up hover:border-zinc-600"
+      style={{ borderColor: `${platform.brandColor}25` }}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <img
-            src={platform.logo}
-            alt={platform.displayName}
-            width={26}
-            height={26}
-            className="rounded-sm shrink-0"
-            onError={e => { e.target.style.display = 'none' }}
-          />
-          <div>
-            <span className="text-sm font-semibold text-zinc-200">{platform.displayName}</span>
-            {reviewCount && (
-              <span className="block text-xs text-zinc-500">{formatReviewCount(reviewCount)}</span>
-            )}
-          </div>
+      {/* Identity */}
+      <div className="flex items-center gap-3 shrink-0">
+        <img
+          src={platform.logo}
+          alt={platform.displayName}
+          width={30}
+          height={30}
+          className="rounded-sm shrink-0"
+          onError={e => { e.target.style.display = 'none' }}
+        />
+        <div>
+          <span className="text-sm font-semibold text-zinc-200 block">{platform.displayName}</span>
+          {reviewCount && (
+            <span className="text-xs text-zinc-500">{formatReviewCount(reviewCount)}</span>
+          )}
         </div>
-        {rating != null && (
-          <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold border shrink-0 ${colors.text} ${colors.bg} ${colors.border}`}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-            {Number(rating).toFixed(1)}
-          </div>
-        )}
       </div>
 
-      <p className="text-xs text-zinc-600">
-        Yelp review previews aren't available via the public API.
+      {/* Rating */}
+      {rating != null && (
+        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-semibold border shrink-0 ${colors.text} ${colors.bg} ${colors.border}`}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+          </svg>
+          {Number(rating).toFixed(1)}
+        </div>
+      )}
+
+      {/* Divider */}
+      <div className="hidden sm:block h-8 w-px bg-zinc-700 shrink-0" />
+
+      {/* Note */}
+      <p className="text-sm text-zinc-400 flex-1 min-w-0">
+        Yelp limits review previews via their public API — the full listing has complete reviews.
       </p>
 
+      {/* CTA */}
       {sourceUrl && (
         <a
           href={sourceUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs font-medium inline-flex items-center gap-1.5 hover:opacity-80 transition-opacity"
-          style={{ color: platform.brandColor }}
+          className="shrink-0 flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg border transition-all hover:opacity-80"
+          style={{ color: platform.brandColor, borderColor: `${platform.brandColor}50` }}
         >
-          See all reviews on Yelp
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          See all reviews
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>
           </svg>
         </a>
@@ -111,7 +117,7 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
   if (isLoading) return <PlatformCardSkeleton />
   if (isError || !data) return <PlatformCardError platform={platform} error={error} />
 
-  if (platform.id === 'yelp') return <YelpCompactCard platform={platform} data={data} />
+  if (platform.id === 'yelp') return <YelpWideCard platform={platform} data={data} />
 
   const { rating, reviewCount, reviews = [] } = data
   const colors = sentimentColor(rating)

@@ -1,4 +1,6 @@
 import PlatformCard from './PlatformCard'
+import { YelpWideCard } from './PlatformCard'
+import { PLATFORM_MAP } from '../../constants/platforms'
 
 function platformSortScore(r) {
   if (r.isError) return 2
@@ -17,19 +19,34 @@ export default function PlatformGrid({ results, query }) {
 
   const sorted = [...visible].sort((a, b) => platformSortScore(a) - platformSortScore(b))
 
+  // Yelp renders full-width below the main grid
+  const yelpResult = sorted.find(r => r.platform.id === 'yelp' && !r.isLoading)
+  const gridResults = sorted.filter(r => r.platform.id !== 'yelp' || r.isLoading)
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
-      {sorted.map(({ platform, data, isLoading, isError, error }) => (
-        <PlatformCard
-          key={platform.id}
-          platformId={platform.id}
-          data={data}
-          isLoading={isLoading}
-          isError={isError}
-          error={error}
-          query={query}
+    <div className="space-y-4">
+      {gridResults.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+          {gridResults.map(({ platform, data, isLoading, isError, error }) => (
+            <PlatformCard
+              key={platform.id}
+              platformId={platform.id}
+              data={data}
+              isLoading={isLoading}
+              isError={isError}
+              error={error}
+              query={query}
+            />
+          ))}
+        </div>
+      )}
+
+      {yelpResult && (
+        <YelpWideCard
+          platform={yelpResult.platform}
+          data={yelpResult.data}
         />
-      ))}
+      )}
     </div>
   )
 }
