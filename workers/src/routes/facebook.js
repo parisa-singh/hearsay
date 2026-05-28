@@ -23,12 +23,13 @@ export async function facebookHandler(request, env) {
   const query = searchParams.get('query')
   const city = searchParams.get('city')
   const category = searchParams.get('category')
+  const nocache = searchParams.get('nocache') === '1'
 
   if (!query) return errorResponse('Missing query parameter', 400)
 
   const searchQuery = buildSearchQuery(query, city, category)
   const cacheKey = `facebook:${searchQuery}`
-  const cached = await getCached(cacheKey)
+  const cached = await getCached(cacheKey, nocache)
   if (cached) return Response.json(cached)
 
   try {

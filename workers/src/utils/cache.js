@@ -3,7 +3,8 @@
  * Keys are derived from the request URL (or a custom key string).
  */
 
-export async function getCached(key) {
+export async function getCached(key, nocache = false) {
+  if (nocache) return null
   const cache = caches.default
   const cacheKey = new Request(`https://hearsay-cache/${encodeURIComponent(key)}`)
   const cached = await cache.match(cacheKey)
@@ -14,7 +15,8 @@ export async function getCached(key) {
 export async function setCached(key, data, ttlSeconds = 3600) {
   const cache = caches.default
   const cacheKey = new Request(`https://hearsay-cache/${encodeURIComponent(key)}`)
-  const response = Response.json(data, {
+  const enriched = { ...data, fetchedAt: Date.now() }
+  const response = Response.json(enriched, {
     headers: {
       'Cache-Control': `public, max-age=${ttlSeconds}`,
       'Content-Type': 'application/json',

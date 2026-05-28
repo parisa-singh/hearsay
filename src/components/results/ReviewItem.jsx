@@ -49,13 +49,29 @@ function decodeText(raw) {
     .replace(/<[^>]*>/g, '')
 }
 
-export default function ReviewItem({ review, platformId, brandColor }) {
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+// Splits text into [plain, match, plain, match, ...] segments for highlighting
+function splitHighlight(text, query) {
+  if (!query || !text) return null
+  const words = query.trim().split(/\s+/).filter(w => w.length > 2)
+  if (!words.length) return null
+  const pattern = new RegExp(`(${words.map(escapeRegex).join('|')})`, 'gi')
+  const parts = text.split(pattern)
+  if (parts.length <= 1) return null
+  return parts
+}
+
+export default function ReviewItem({ review, platformId, brandColor, query }) {
   const { rating, author, date, url, videoTitle } = review
   const text = decodeText(review.text)
   const [expanded, setExpanded] = useState(false)
 
   const isLong = text.length > SHORT_LIMIT
   const displayText = expanded || !isLong ? text : text.slice(0, SHORT_LIMIT).trimEnd() + '…'
+  const segments = splitHighlight(displayText, query)
   const linkLabel = PLATFORM_LINK_LABELS[platformId] ?? 'View source'
   const linkColor = brandColor ?? '#71717a'
 
@@ -74,7 +90,14 @@ export default function ReviewItem({ review, platformId, brandColor }) {
       )}
 
       <p className="text-sm text-zinc-300 leading-relaxed break-words">
-        {displayText}
+        {segments
+          ? segments.map((part, i) =>
+              i % 2 === 1
+                ? <mark key={i} className="bg-yellow-400/20 text-yellow-200 rounded-sm not-italic">{part}</mark>
+                : part
+            )
+          : displayText
+        }
         {isLong && (
           <button
             onClick={() => setExpanded(e => !e)}

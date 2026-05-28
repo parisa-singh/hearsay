@@ -4,7 +4,7 @@ import { queryKeys } from '../constants/queryKeys'
 import { useUIStore } from '../store/uiStore'
 import { PLATFORMS } from '../constants/platforms'
 
-export function useAllPlatforms(query, category = null) {
+export function useAllPlatforms(query, category = null, refreshCount = 0) {
   const { isPlatformEnabled, location } = useUIStore()
 
   const enabledPlatforms = PLATFORMS.filter(
@@ -15,10 +15,12 @@ export function useAllPlatforms(query, category = null) {
     ? { lat: location.lat, lng: location.lng, city: location.city, country: location.country }
     : {}
 
+  const extraParams = refreshCount > 0 ? { nocache: '1' } : {}
+
   const queries = useQueries({
     queries: enabledPlatforms.map(platform => ({
-      queryKey: queryKeys.platform(platform.id, query, location, category),
-      queryFn: () => fetchPlatform(platform.endpoint, { query, category, ...locationParams }),
+      queryKey: queryKeys.platform(platform.id, query, location, category, refreshCount),
+      queryFn: () => fetchPlatform(platform.endpoint, { query, category, ...locationParams, ...extraParams }),
       enabled: Boolean(query),
       staleTime: 5 * 60 * 1000,
       retry: 0,

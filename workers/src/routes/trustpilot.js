@@ -2,63 +2,59 @@ import { getCached, setCached } from '../utils/cache.js'
 import { errorResponse } from '../utils/errors.js'
 import { filterReviewsForCategory } from '../utils/relevanceFilter.js'
 
-const CACHE_TTL = 12 * 3600 // 12hr
+const SERPAPI_BASE = 'https://serpapi.com/search'
+const CACHE_TTL = 24 * 3600
 
 export async function trustpilotHandler(request, env) {
   const { searchParams } = new URL(request.url)
   const query = searchParams.get('query')
   const category = searchParams.get('category')
+  const nocache = searchParams.get('nocache') === '1'
 
   if (!query) return errorResponse('Missing query parameter', 400)
 
-  const cacheKey = `trustpilot:${query}`
-  const cached = await getCached(cacheKey)
+  // Use a versioned cache key so old HTML-scraped results aren't served
+  const cacheKey = `trustpilot:v2:${query}`
+  const cached = await getCached(cacheKey, nocache)
   if (cached) return Response.json(cached)
 
   try {
-    // Search Trustpilot for the business
-    const searchRes = await fetch(
-      `https://www.trustpilot.com/search?query=${encodeURIComponent(query)}`,
-      { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Hearsay/1.0)' } }
+    const params = new URLSearchParams({
+      engine: 'google',
+      q: `${query} site:trustpilot.com reviews`,
+      api_key: env.SERPAPI_KEY,
+      num: '5',
+    })
+    const res = await fetch(`${SERPAPI_BASE}?${params}`)
+    const data = await res.json()
+
+    if (data.error) throw new Error(data.error)
+
+    const results = (data.organic_results ?? []).filter(r =>
+      r.link?.includes('trustpilot.com')
     )
-    const searchHtml = await searchRes.text()
 
-    // Extract first business URL from search results
-    const businessSlug = extractBusinessSlug(searchHtml)
-    if (!businessSlug) {
-      return Response.json({ platform: 'trustpilot', reviews: [], reviewCount: null, rating: null })
-    }
-
-    // Fetch business page and extract JSON-LD
-    const pageRes = await fetch(
-      `https://www.trustpilot.com/review/${businessSlug}`,
-      { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Hearsay/1.0)' } }
+    const reviews = filterReviewsForCategory(
+      results.slice(0, 4).map(r => ({
+        text: r.snippet ?? r.title ?? '',
+        rating: parseRatingFromSnippet(r.snippet),
+        author: null,
+        date: null,
+        url: r.link ?? null,
+      })),
+      category
     )
-    const pageHtml = await pageRes.text()
-    const jsonLd = extractJsonLd(pageHtml)
 
-    if (!jsonLd) {
-      return Response.json({ platform: 'trustpilot', reviews: [], reviewCount: null, rating: null })
-    }
-
-    const aggregateRating = jsonLd.aggregateRating ?? {}
-    const reviewItems = jsonLd.review ?? []
+    const ratingResult = results.find(r => r.snippet && parseRatingFromSnippet(r.snippet) !== null)
+    const rating = ratingResult ? parseRatingFromSnippet(ratingResult.snippet) : null
 
     const response = {
       platform: 'trustpilot',
-      name: jsonLd.name ?? query,
-      rating: aggregateRating.ratingValue ? parseFloat(aggregateRating.ratingValue) : null,
-      reviewCount: aggregateRating.reviewCount ?? null,
-      sourceUrl: `https://www.trustpilot.com/review/${businessSlug}`,
-      reviews: filterReviewsForCategory(
-        reviewItems.slice(0, 5).map(r => ({
-          text: r.reviewBody ?? '',
-          rating: r.reviewRating?.ratingValue ?? null,
-          author: r.author?.name ?? null,
-          date: r.datePublished ?? null,
-        })),
-        category
-      ),
+      name: query,
+      rating,
+      reviewCount: null,
+      sourceUrl: results[0]?.link ?? null,
+      reviews,
     }
 
     await setCached(cacheKey, response, CACHE_TTL)
@@ -68,28 +64,13 @@ export async function trustpilotHandler(request, env) {
   }
 }
 
-function extractBusinessSlug(html) {
-  // Look for links to /review/ pages in search results
-  const match = html.match(/href="\/review\/([\w.-]+)"/i)
-  return match?.[1] ?? null
-}
-
-function extractJsonLd(html) {
-  // Extract all JSON-LD blocks and find the one with @type LocalBusiness or Organization
-  const regex = /<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi
-  let match
-  while ((match = regex.exec(html)) !== null) {
-    try {
-      const data = JSON.parse(match[1])
-      const items = Array.isArray(data) ? data : [data]
-      for (const item of items) {
-        if (item.aggregateRating || item['@type'] === 'LocalBusiness' || item['@type'] === 'Organization') {
-          return item
-        }
-      }
-    } catch {
-      // Skip malformed JSON-LD blocks
-    }
-  }
+function parseRatingFromSnippet(text) {
+  if (!text) return null
+  const trustScore = text.match(/TrustScore\s+(\d+(?:\.\d+)?)/i)
+  if (trustScore) return parseFloat(trustScore[1])
+  const outOf = text.match(/(\d+(?:\.\d+)?)\s*(?:out of|\/)\s*5/i)
+  if (outOf) return parseFloat(outOf[1])
+  const stars = text.match(/(\d+(?:\.\d+)?)\s*stars?/i)
+  if (stars) return parseFloat(stars[1])
   return null
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { PLATFORM_MAP } from '../../constants/platforms'
 import { formatReviewCount } from '../../utils/formatters'
 import { sentimentColor } from '../../utils/sentimentColor'
@@ -109,8 +109,18 @@ function getExternalUrl(platform, data, query) {
   return null
 }
 
+function formatAge(ts) {
+  if (!ts) return null
+  const min = Math.floor((Date.now() - ts) / 60000)
+  if (min < 1) return 'just now'
+  if (min < 60) return `${min}m ago`
+  return `${Math.floor(min / 60)}h ago`
+}
+
 export default function PlatformCard({ platformId, data, isLoading, isError, error, query }) {
   const [displayCount, setDisplayCount] = useState(INITIAL_COUNT)
+  const [filterRating, setFilterRating] = useState(null)
+  const [sortOrder, setSortOrder] = useState('default')
   const platform = PLATFORM_MAP[platformId]
   if (!platform) return null
 
@@ -119,14 +129,33 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
 
   if (platform.id === 'yelp') return <YelpWideCard platform={platform} data={data} />
 
-  const { rating, reviewCount, reviews = [] } = data
+  const { rating, reviewCount, reviews = [], fetchedAt } = data
   const colors = sentimentColor(rating)
   const label = platform.label ?? platform.displayName
   const externalUrl = getExternalUrl(platform, data, query ?? '')
-  const displayedReviews = reviews.slice(0, displayCount)
-  const hasMore = reviews.length > displayCount
   const isYouTube = platform.id === 'youtube'
   const brandColor = platform.brandColor
+
+  // Filter + sort
+  const hasRatedReviews = reviews.some(r => r.rating != null)
+  const hasDates = reviews.some(r => r.date != null)
+  const availableStars = hasRatedReviews
+    ? [5, 4, 3, 2, 1].filter(s => reviews.some(r => Math.round(r.rating) === s))
+    : []
+
+  const processedReviews = useMemo(() => {
+    let list = filterRating !== null
+      ? reviews.filter(r => Math.round(r.rating) === filterRating)
+      : reviews
+    if (sortOrder === 'newest') list = [...list].sort((a, b) => new Date(b.date) - new Date(a.date))
+    else if (sortOrder === 'oldest') list = [...list].sort((a, b) => new Date(a.date) - new Date(b.date))
+    else if (sortOrder === 'highest') list = [...list].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
+    else if (sortOrder === 'lowest') list = [...list].sort((a, b) => (a.rating ?? 0) - (b.rating ?? 0))
+    return list
+  }, [reviews, filterRating, sortOrder])
+
+  const displayedReviews = processedReviews.slice(0, displayCount)
+  const hasMore = processedReviews.length > displayCount
 
   return (
     <div
@@ -151,9 +180,14 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
                 <span className="text-xs text-zinc-600 italic shrink-0">(public mentions)</span>
               )}
             </div>
-            {reviewCount && (
-              <span className="text-xs text-zinc-500">{formatReviewCount(reviewCount)}</span>
-            )}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {reviewCount && (
+                <span className="text-xs text-zinc-500">{formatReviewCount(reviewCount)}</span>
+              )}
+              {fetchedAt && (
+                <span className="text-xs text-zinc-700">{formatAge(fetchedAt)}</span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -167,14 +201,69 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
         )}
       </div>
 
+      {/* Filter / sort controls */}
+      {(availableStars.length > 0 || hasDates) && (
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
+          {availableStars.length > 0 && (
+            <div className="flex items-center gap-1 flex-wrap">
+              {[null, ...availableStars].map(star => (
+                <button
+                  key={star ?? 'all'}
+                  onClick={() => { setFilterRating(star); setDisplayCount(INITIAL_COUNT) }}
+                  className={`text-xs px-2 py-0.5 rounded-full border transition-all ${
+                    filterRating === star
+                      ? 'border-white/30 bg-white/10 text-white'
+                      : 'border-zinc-700 text-zinc-600 hover:text-zinc-300 hover:border-zinc-600'
+                  }`}
+                >
+                  {star === null ? 'All' : `${star}★`}
+                </button>
+              ))}
+            </div>
+          )}
+          {hasDates && (
+            <div className="flex items-center gap-1 ml-auto">
+              {['newest', 'oldest'].map(order => (
+                <button
+                  key={order}
+                  onClick={() => setSortOrder(s => s === order ? 'default' : order)}
+                  className={`text-xs px-2 py-0.5 rounded-full border capitalize transition-all ${
+                    sortOrder === order
+                      ? 'border-white/30 bg-white/10 text-white'
+                      : 'border-zinc-700 text-zinc-600 hover:text-zinc-300 hover:border-zinc-600'
+                  }`}
+                >
+                  {order}
+                </button>
+              ))}
+              {hasRatedReviews && ['highest', 'lowest'].map(order => (
+                <button
+                  key={order}
+                  onClick={() => setSortOrder(s => s === order ? 'default' : order)}
+                  className={`text-xs px-2 py-0.5 rounded-full border capitalize transition-all ${
+                    sortOrder === order
+                      ? 'border-white/30 bg-white/10 text-white'
+                      : 'border-zinc-700 text-zinc-600 hover:text-zinc-300 hover:border-zinc-600'
+                  }`}
+                >
+                  {order}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Reviews */}
       <div>
-        {reviews.length === 0 ? (
-          <p className="text-sm text-zinc-600 py-2">No reviews found for this search.</p>
+        {processedReviews.length === 0 ? (
+          <p className="text-sm text-zinc-600 py-2">
+            {filterRating !== null ? `No ${filterRating}★ reviews.` : 'No reviews found for this search.'}
+          </p>
         ) : (
           <>
             {displayedReviews.map((review, i) => (
-              <ReviewItem key={i} review={review} platformId={platform.id} brandColor={brandColor} />
+              <ReviewItem key={i} review={review} platformId={platform.id} brandColor={brandColor} query={query} />
             ))}
 
             {/* YouTube inline controls */}
@@ -185,7 +274,7 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
                     onClick={() => setDisplayCount(c => c + LOAD_MORE_COUNT)}
                     className="text-xs font-medium text-zinc-500 hover:text-zinc-300 transition-colors"
                   >
-                    Load more ({reviews.length - displayCount} remaining)
+                    Load more ({processedReviews.length - displayCount} remaining)
                   </button>
                 )}
                 {displayCount > INITIAL_COUNT && (
