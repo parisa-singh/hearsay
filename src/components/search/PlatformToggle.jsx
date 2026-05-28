@@ -101,7 +101,7 @@ export default function PlatformToggle() {
       {showBanner && (
         <button
           onClick={() => { setShowBanner(false); setIsFading(false) }}
-          className="w-full text-center text-xs text-zinc-500 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 animate-fade-in hover:border-zinc-700 transition-colors"
+          className="w-full text-center text-xs text-zinc-500 bg-zinc-900 border border-zinc-800 rounded-lg px-2 sm:px-3 py-2 animate-fade-in hover:border-zinc-700 transition-colors leading-relaxed"
           style={{ opacity: isFading ? 0 : 1, transition: 'opacity 600ms ease-out' }}
         >
           Showing platforms popular in {city ?? location.country}

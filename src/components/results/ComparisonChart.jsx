@@ -53,7 +53,7 @@ export default function ComparisonChart({ results }) {
               <PolarGrid stroke="#3f3f46" />
               <PolarAngleAxis
                 dataKey="platform"
-                tick={{ fill: '#a1a1aa', fontSize: 12 }}
+                tick={{ fill: '#a1a1aa', fontSize: 11 }}
               />
               <PolarRadiusAxis
                 angle={30}
@@ -80,7 +80,7 @@ export default function ComparisonChart({ results }) {
               .sort((a, b) => b.data.rating - a.data.rating)
               .map(r => (
                 <div key={r.platform.id} className="flex items-center gap-3">
-                  <span className="text-xs text-zinc-500 w-24 text-right">{r.platform.displayName}</span>
+                  <span className="text-xs text-zinc-500 w-16 sm:w-24 text-right truncate">{r.platform.displayName}</span>
                   <div className="flex-1 bg-zinc-800 rounded-full h-1.5 overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-700"

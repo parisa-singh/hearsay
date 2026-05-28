@@ -41,7 +41,7 @@ export default function SearchHistorySidebar() {
       />
 
       {/* Drawer */}
-      <div className="fixed right-0 top-0 h-full w-80 z-50 bg-zinc-900 border-l border-zinc-700 flex flex-col"
+      <div className="fixed right-0 top-0 h-full w-full sm:w-80 z-50 bg-zinc-900 border-l border-zinc-700 flex flex-col"
         style={{ animation: 'slideInRight 300ms ease-out' }}
       >
         <style>{`

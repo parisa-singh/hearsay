@@ -37,7 +37,7 @@ export default function HomePage() {
   }
 
   return (
-    <main className="flex-1 flex flex-col items-center justify-center px-4 py-16">
+    <main className="flex-1 flex flex-col items-center justify-center px-4 py-8 sm:py-16">
       <SearchHistorySidebar />
 
       {/* Hero */}
@@ -45,14 +45,14 @@ export default function HomePage() {
         <p className="text-xs font-semibold tracking-widest text-zinc-500 uppercase mb-4">
           Review Aggregator
         </p>
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-white mb-4">
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white mb-4">
           What are people{' '}
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-zinc-300 to-zinc-500">
             really
           </span>{' '}
           saying?
         </h1>
-        <p className="text-zinc-400 text-lg leading-relaxed">
+        <p className="text-zinc-400 text-base sm:text-lg leading-relaxed">
           Search any restaurant, product, or place. Hearsay pulls real reviews from the platforms
           people actually use in your part of the world — not just one algorithm's version.
         </p>

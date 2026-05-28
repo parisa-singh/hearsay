@@ -40,7 +40,7 @@ function VideosSection({ videos }) {
             href={v.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-shrink-0 w-40 group"
+            className="flex-shrink-0 w-32 sm:w-40 group"
           >
             <div className="relative rounded-lg overflow-hidden bg-zinc-800 mb-2">
               <img

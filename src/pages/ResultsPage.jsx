@@ -33,7 +33,7 @@ export default function ResultsPage() {
 
       {/* Page title */}
       <div>
-        <h1 className="text-2xl font-semibold text-white">
+        <h1 className="text-lg sm:text-2xl font-semibold text-white">
           What people are saying about{' '}
           <span className="text-zinc-400">"{query}"</span>
         </h1>
