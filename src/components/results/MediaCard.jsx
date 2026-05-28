@@ -13,7 +13,7 @@ function extractVideos(reviews) {
       viewCount: r.viewCount ?? null,
     })
   }
-  return videos.slice(0, 4)
+  return videos.slice(0, 3)
 }
 
 function formatViewCount(n) {
@@ -74,7 +74,7 @@ function VideosSection({ videos }) {
 
 function PhotosSection({ photos, sourceUrl }) {
   return (
-    <div className="shrink-0">
+    <div className="flex-1 min-w-0">
       <div className="flex items-center gap-2 mb-3">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-400">
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
@@ -83,14 +83,14 @@ function PhotosSection({ photos, sourceUrl }) {
         </svg>
         <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Photos</span>
       </div>
-      <div className="flex gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {photos.slice(0, 3).map((p, i) => (
           <a
             key={i}
             href={sourceUrl ?? '#'}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-24 h-24 rounded-lg overflow-hidden bg-zinc-800 flex-shrink-0 block hover:opacity-80 transition-opacity"
+            className="block rounded-lg overflow-hidden bg-zinc-800 aspect-[4/3] hover:opacity-80 transition-opacity"
           >
             <img
               src={p.url}
