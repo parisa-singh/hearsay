@@ -3,6 +3,15 @@ import { formatRelativeTime, starArray } from '../../utils/formatters'
 
 const SHORT_LIMIT = 120
 
+const PLATFORM_LINK_LABELS = {
+  youtube: 'Watch on YouTube',
+  facebook: 'View on Facebook',
+  tripadvisor: 'View on TripAdvisor',
+  reddit: 'View on Reddit',
+  trustpilot: 'View on Trustpilot',
+  google: 'View on Google',
+}
+
 function StarRating({ rating, max = 5 }) {
   if (!rating) return null
   const { full, half, empty } = starArray(rating, max)
@@ -27,12 +36,14 @@ function StarRating({ rating, max = 5 }) {
   )
 }
 
-export default function ReviewItem({ review, showVideoLink = false }) {
+export default function ReviewItem({ review, platformId, brandColor }) {
   const { text, rating, author, date, url, videoTitle } = review
   const [expanded, setExpanded] = useState(false)
 
   const isLong = text.length > SHORT_LIMIT
   const displayText = expanded || !isLong ? text : text.slice(0, SHORT_LIMIT).trimEnd() + '…'
+  const linkLabel = PLATFORM_LINK_LABELS[platformId] ?? 'View source'
+  const linkColor = brandColor ?? '#71717a'
 
   return (
     <div className="py-3 border-b border-zinc-800 last:border-0">
@@ -44,7 +55,7 @@ export default function ReviewItem({ review, showVideoLink = false }) {
         {date && <span className="text-xs text-zinc-600 shrink-0">{formatRelativeTime(date)}</span>}
       </div>
 
-      {videoTitle && showVideoLink && (
+      {videoTitle && (
         <p className="text-xs text-zinc-600 mb-1 truncate">{videoTitle}</p>
       )}
 
@@ -60,17 +71,18 @@ export default function ReviewItem({ review, showVideoLink = false }) {
         )}
       </p>
 
-      {showVideoLink && url && (
+      {url && (
         <a
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-1.5 inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-400 transition-colors"
+          className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium hover:opacity-80 transition-opacity"
+          style={{ color: linkColor }}
         >
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V9.19a8.16 8.16 0 0 0 4.77 1.52V7.27a4.85 4.85 0 0 1-1.01-.58z"/>
+          {linkLabel}
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>
           </svg>
-          Watch on YouTube
         </a>
       )}
     </div>

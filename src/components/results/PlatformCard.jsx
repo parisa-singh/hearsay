@@ -126,6 +126,7 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
   const displayedReviews = reviews.slice(0, displayCount)
   const hasMore = reviews.length > displayCount
   const isYouTube = platform.id === 'youtube'
+  const brandColor = platform.brandColor
 
   return (
     <div
@@ -173,7 +174,7 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
         ) : (
           <>
             {displayedReviews.map((review, i) => (
-              <ReviewItem key={i} review={review} showVideoLink={isYouTube} />
+              <ReviewItem key={i} review={review} platformId={platform.id} brandColor={brandColor} />
             ))}
 
             {/* YouTube inline controls */}

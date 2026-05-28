@@ -1,6 +1,5 @@
 import PlatformCard from './PlatformCard'
 import { YelpWideCard } from './PlatformCard'
-import { PLATFORM_MAP } from '../../constants/platforms'
 
 function platformSortScore(r) {
   if (r.isError) return 2
@@ -34,7 +33,7 @@ export default function PlatformGrid({ results, query }) {
       )}
 
       {gridResults.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {gridResults.map(({ platform, data, isLoading, isError, error }) => (
             <PlatformCard
               key={platform.id}
