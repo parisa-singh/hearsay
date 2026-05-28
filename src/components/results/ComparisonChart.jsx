@@ -44,7 +44,7 @@ export default function ComparisonChart({ results }) {
       </button>
 
       {open && (
-        <div className="px-6 pb-6">
+        <div className="px-3 sm:px-6 pb-3 sm:pb-6">
           <ResponsiveContainer width="100%" height={260}>
             <RadarChart data={ratedPlatforms.map(r => ({
               platform: r.platform.displayName,

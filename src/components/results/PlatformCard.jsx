@@ -45,7 +45,7 @@ export function YelpWideCard({ platform, data }) {
 
   return (
     <div
-      className="rounded-xl border bg-zinc-900 px-5 py-4 flex flex-wrap sm:flex-nowrap items-center gap-4 transition-all duration-300 animate-slide-up hover:border-zinc-600"
+      className="rounded-xl border bg-zinc-900 px-3 sm:px-5 py-3 sm:py-4 flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 transition-all duration-300 animate-slide-up hover:border-zinc-600"
       style={{ borderColor: `${platform.brandColor}25` }}
     >
       {/* Identity */}
@@ -130,11 +130,11 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
 
   return (
     <div
-      className="rounded-xl border bg-zinc-900 p-4 sm:p-5 transition-all duration-300 animate-slide-up hover:border-zinc-700 flex flex-col"
+      className="rounded-xl border bg-zinc-900 p-3 sm:p-5 transition-all duration-300 animate-slide-up hover:border-zinc-700"
       style={{ borderColor: `${platform.brandColor}30` }}
     >
       {/* Header */}
-      <div className="flex items-start justify-between gap-2 mb-4">
+      <div className="flex items-start justify-between gap-2 mb-2 sm:mb-4">
         <div className="flex items-center gap-2 min-w-0">
           <img
             src={platform.logo}
@@ -168,7 +168,7 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
       </div>
 
       {/* Reviews */}
-      <div className="flex-1">
+      <div>
         {reviews.length === 0 ? (
           <p className="text-sm text-zinc-600 py-2">No reviews found for this search.</p>
         ) : (

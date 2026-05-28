@@ -135,7 +135,7 @@ export default function MediaCard({ results }) {
   const hasBoth = videos.length > 0 && photos.length > 0
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 sm:p-5 animate-slide-up">
+    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3 sm:p-5 animate-slide-up">
       <div className={`flex flex-col gap-5 ${hasBoth ? 'lg:flex-row lg:gap-6' : ''}`}>
         {videos.length > 0 && <VideosSection videos={videos} />}
         {hasBoth && <div className="hidden lg:block w-px bg-zinc-800 self-stretch shrink-0" />}

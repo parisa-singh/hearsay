@@ -41,7 +41,7 @@ export default function HomePage() {
       <SearchHistorySidebar />
 
       {/* Hero */}
-      <div className="text-center mb-8 max-w-2xl">
+      <div className="text-center mb-5 sm:mb-8 max-w-2xl">
         <p className="text-xs font-semibold tracking-widest text-zinc-500 uppercase mb-4">
           Review Aggregator
         </p>
@@ -131,7 +131,7 @@ export default function HomePage() {
       )}
 
       {/* Available platforms strip */}
-      <div className="mt-14 w-full max-w-2xl">
+      <div className="mt-6 sm:mt-12 w-full max-w-2xl">
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-6 py-4">
           <p className="text-xs text-zinc-500 text-center mb-3 uppercase tracking-wider">Sources</p>
           <div className="flex items-center justify-center gap-5 flex-wrap">

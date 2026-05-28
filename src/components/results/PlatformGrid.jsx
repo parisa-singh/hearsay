@@ -33,7 +33,7 @@ export default function PlatformGrid({ results, query }) {
       )}
 
       {gridResults.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 items-start">
           {gridResults.map(({ platform, data, isLoading, isError, error }) => (
             <PlatformCard
               key={platform.id}

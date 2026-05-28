@@ -36,8 +36,22 @@ function StarRating({ rating, max = 5 }) {
   )
 }
 
+function decodeText(raw) {
+  if (!raw) return ''
+  return raw
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<[^>]*>/g, '')
+}
+
 export default function ReviewItem({ review, platformId, brandColor }) {
-  const { text, rating, author, date, url, videoTitle } = review
+  const { rating, author, date, url, videoTitle } = review
+  const text = decodeText(review.text)
   const [expanded, setExpanded] = useState(false)
 
   const isLong = text.length > SHORT_LIMIT
@@ -46,7 +60,7 @@ export default function ReviewItem({ review, platformId, brandColor }) {
   const linkColor = brandColor ?? '#71717a'
 
   return (
-    <div className="py-3 border-b border-zinc-800 last:border-0">
+    <div className="py-2 sm:py-3 border-b border-zinc-800 last:border-0">
       <div className="flex items-center justify-between gap-2 mb-1.5">
         <div className="flex items-center gap-2 min-w-0">
           {rating && <StarRating rating={rating} />}

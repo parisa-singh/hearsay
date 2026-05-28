@@ -25,7 +25,7 @@ export default function ResultsPage() {
   const divergence = calculateDivergence(successfulResults)
 
   return (
-    <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-8 space-y-6">
+    <main className="flex-1 max-w-6xl mx-auto w-full px-3 sm:px-4 py-4 sm:py-8 space-y-3 sm:space-y-6">
       {/* Compact search bar */}
       <div className="max-w-2xl">
         <SearchBar initialValue={query} initialCategory={category} compact />
