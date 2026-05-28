@@ -50,11 +50,11 @@ https://hearsay-api.parisa-singh.workers.dev
         ↕
 GET  /google        → Google Places API (textsearch + Place Details)
 GET  /yelp          → Yelp Fusion API (Business Search + Reviews)
-GET  /reddit        → Reddit OAuth API (client credentials, route ready — no credentials yet)
+GET  /reddit        → Reddit OAuth API (client credentials; default-on/queried — verify secrets exist)
 GET  /youtube       → YouTube Data API v3 (Search + Videos + CommentThreads)
-GET  /tripadvisor   → SerpAPI (TripAdvisor engine, 24hr cache)
-GET  /facebook      → SerpAPI fallback (labeled "Facebook Mentions", 24hr cache)
-GET  /trustpilot    → Trustpilot page HTML → JSON-LD extraction (fragile)
+GET  /tripadvisor   → SerpAPI (Google engine, site:tripadvisor.com, 24hr cache)
+GET  /facebook      → SerpAPI (Google engine, site:facebook.com, labeled "Facebook Mentions", 24hr cache)
+GET  /trustpilot    → SerpAPI (Google engine, site:trustpilot.com, 24hr cache, category-gated)
 ```
 
 **Critical architectural details**:
@@ -65,6 +65,8 @@ GET  /trustpilot    → Trustpilot page HTML → JSON-LD extraction (fragile)
 - Parallel fetching: `useQueries` — one platform failing never blocks others (`retry: 0`)
 - `VITE_API_BASE_URL` must be set as a GitHub Actions repo secret for production builds
 - `useAllPlatforms.js` filters to `p.integrated === true` — coming-soon platforms are never queried
+- **Category-aware querying**: every search carries a `category` (`restaurant` | `product` | `place` | `business`, chosen via pills in `SearchBar.jsx`). Each route shapes/gates by category — see the "Category Handling" table below. The `category` is part of each route's cache key (or baked into the search string) so cross-category requests don't serve each other's results.
+- **3 routes share SerpAPI**: TripAdvisor + Facebook + Trustpilot all call SerpAPI's Google engine against one 100-search/month budget. A single non-restaurant search can fire up to 3 SerpAPI calls (minus 24hr cache hits)
 
 ---
 
@@ -81,9 +83,9 @@ Also set as a GitHub Actions repo secret so production builds pick it up.
 GOOGLE_API_KEY        — Google Cloud key (Places API + YouTube Data API v3 both enabled on same key)
 YELP_API_KEY          — Yelp Fusion API key
 YOUTUBE_API_KEY       — Same key as GOOGLE_API_KEY
-SERPAPI_KEY           — SerpAPI key (TripAdvisor + Facebook routes)
-REDDIT_CLIENT_ID      — Reddit app client ID (not yet set — see Known Issues)
-REDDIT_CLIENT_SECRET  — Reddit app client secret (not yet set)
+SERPAPI_KEY           — SerpAPI key (TripAdvisor + Facebook + Trustpilot routes)
+REDDIT_CLIENT_ID      — Reddit app client ID (status unverified — run `wrangler secret list`)
+REDDIT_CLIENT_SECRET  — Reddit app client secret (status unverified)
 ```
 
 ---
@@ -97,34 +99,52 @@ REDDIT_CLIENT_SECRET  — Reddit app client secret (not yet set)
 | YouTube | ✅ Working | Comments + video descriptions as review signal; 2hr cache; links back to videos |
 | TripAdvisor | ✅ Working | SerpAPI; 24hr cache |
 | Facebook | ✅ Working | SerpAPI fallback; labeled "Facebook Mentions"; 24hr cache |
-| Reddit | ❌ No credentials | Route fully implemented. Need to accept Reddit Responsible Builder Policy then add secrets. |
-| Trustpilot | ⚠️ Broken/partial | JSON-LD scraping from page HTML; Trustpilot frequently blocks Workers' user agent. Returns empty silently. Needs real API approach. |
+| Reddit | ⚙️ Default-on, creds unverified | `integrated: true` + `defaultEnabled: true` in `platforms.js`, so it's queried on every search. Route uses OAuth client credentials. If secrets aren't set it fails silently (card hidden). Verify with `wrangler secret list`. |
+| Trustpilot | ✅ Working | SerpAPI (Google engine, `site:trustpilot.com reviews`); parses TrustScore/stars from snippets; 24hr cache (key `trustpilot:v3:`). Category-gated: `restaurant` returns empty. No longer HTML/JSON-LD scraping. |
+
+---
+
+## Category Handling (per route)
+
+Categories: `restaurant`, `product`, `place`, `business`. Each route gates and/or shapes the query. "Empty" = returns `{ reviews: [], rating: null }` without calling the upstream API.
+
+| Platform | restaurant | product | place | business |
+|---|---|---|---|---|
+| Google | ✅ | ⛔ empty | ✅ | ✅ |
+| Yelp | ✅ | ⛔ empty | ✅ | ✅ |
+| TripAdvisor | ✅ (+city) | ⛔ empty | ✅ (+city) | ⛔ empty |
+| Trustpilot | ⛔ empty | ✅ `<q> review` | ✅ (+city) | ✅ `<q> review` |
+| Facebook | ✅ (+city) | ✅ `<q> review` | ✅ (+city) | ✅ (+city) |
+| YouTube | ✅ (+city) | ✅ `<q> review` | ✅ (+city) | ✅ (+city) |
+| Reddit | ✅ | ✅ | ✅ | ✅ |
+
+- **Reddit ignores `category` entirely** — no gating, no query shaping. It runs for all categories and uses city→subreddit mappings (`CITY_SUBREDDITS`) only when a location is set.
+- Facebook/YouTube/Trustpilot use a `buildSearchQuery(query, city, category)` helper (near-identical copies — candidate for a shared util).
+- `workers/src/utils/relevanceFilter.js` (`filterReviewsForCategory`) strips physical-store/service-visit reviews when `category === 'product'`; applied by Trustpilot, Facebook, YouTube.
 
 ---
 
 ## Future API Work (Priority Order)
 
-### 1. Reddit — just needs credentials
-- Route: `workers/src/routes/reddit.js` — fully implemented, no code changes needed
-- Steps: Visit reddit.com/prefs/apps → accept Responsible Builder Policy → create app → `wrangler secret put REDDIT_CLIENT_ID` + `wrangler secret put REDDIT_CLIENT_SECRET`
+> **Done since last rewrite**: Trustpilot migrated to SerpAPI (no longer scraping). Reddit is now wired default-on — only the Worker secrets remain to confirm/add.
 
-### 2. Trustpilot — needs real approach
-- Route: `workers/src/routes/trustpilot.js` — JSON-LD scraping, frequently fails
-- Options: (a) SerpAPI has a Trustpilot engine (simplest), (b) Trustpilot Business API (requires account), (c) improve scraping with better headers/retry
+### 0. Reddit — confirm credentials
+- Route: `workers/src/routes/reddit.js` — fully implemented and already default-on/queried
+- If `wrangler secret list` shows no `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET`: visit reddit.com/prefs/apps → accept Responsible Builder Policy → create app → `wrangler secret put REDDIT_CLIENT_ID` + `wrangler secret put REDDIT_CLIENT_SECRET`. Until then the card fails silently on every search.
 
-### 3. Foursquare — most actionable coming-soon for US/EU
+### 1. Foursquare — most actionable coming-soon for US/EU
 - Has a Places API free tier at location.foursquare.com
 - Would cover US/CA and EU regional chips immediately
 
-### 4. Zomato — India/Middle East regional chip
+### 2. Zomato — India/Middle East regional chip
 - Public API deprecated 2020; website is JS-rendered
 - Options: (a) Apply at developers.zomato.com, (b) SerpAPI may index Zomato
 
-### 5. OpenTable — US regional chip
+### 3. OpenTable — US regional chip
 - Has affiliate API requiring partnership approval
 - Alternative: SerpAPI
 
-### 6. Regional platforms (low priority — require local partnerships)
+### 4. Regional platforms (low priority — require local partnerships)
 - **India**: JustDial, Magicpin, Swiggy — no public APIs
 - **SE Asia**: GrabFood, Agoda, Wongnai, Chope — require local developer accounts
 - **Europe**: TheFork (no public API), Michelin (static data possible)
@@ -137,6 +157,7 @@ REDDIT_CLIENT_SECRET  — Reddit app client secret (not yet set)
 ## Key UI Decisions
 
 - **Layout**: Shared `Layout.jsx` wraps all routes via React Router `<Outlet>`. `key={pathname}` on the content div triggers `animate-fade-in` on every route change.
+- **Error handling**: Two complementary layers. `ErrorPage.jsx` is the router `errorElement` (full-page, own minimal header) for route/loader errors — set on the Layout route and `/results` in `App.jsx`. `ErrorBoundary.jsx` (class component) wraps `<Outlet>` *inside* the `key={pathname}` div, so render crashes show an in-chrome fallback (Header/Footer kept) and the boundary auto-resets on navigation.
 - **Platform toggles**: All 7 integrated platforms are selected (green) by default. Users deselect what they don't want. Coming-soon chips appear in a second row below — grayed, unclickable, "Soon" badge.
 - **Regional chips**: `getPlatformTiers(countryCode)` in `platformRegions.js` returns 7 platforms per region. Integrated ones go row 1, coming-soon go row 2. Stagger animation (`animate-slide-up` with delay) on region change. Location banner auto-dismisses after 3s.
 - **No-location state**: Shows flat list of all 7 integrated platforms with no regional grouping.
@@ -146,8 +167,11 @@ REDDIT_CLIENT_SECRET  — Reddit app client secret (not yet set)
 - **Yelp card note**: Shows "Yelp limits API previews to 3 snippets" or "Yelp review previews unavailable via API" below the review list, above the external link.
 - **Divergence**: Algorithmic — `calculateDivergence()` flags 1.5+ star gap. Returns `{ detected, platform_a, platform_b, explanation }`.
 - **Location reset**: Clicking Reset triggers a full-screen `animate-wipe-right` overlay (zinc-950, sweeps left→right) that calls `clearLocation()` on animation end.
-- **Search history sidebar**: Right-side drawer, `w-80`, slides in from right. Stores last 20 searches. "View all →" button on homepage opens it. "Clear all" wipes history.
-- **SerpAPI budget**: 100 searches/month shared between TripAdvisor and Facebook. Both are default-on — watch usage. 24hr caching helps significantly.
+- **Search history sidebar**: Right-side drawer, `w-80`, slides in from right. Stores last 20 searches (as `{q, category}`). "View all →" button on homepage opens it. "Clear all" wipes history.
+- **Search categories**: Required before search — 2×2 pill grid in `SearchBar.jsx` (`restaurant`/`product`/`place`/`business`). Drives per-route category gating (see Category Handling table).
+- **Media card**: YouTube video thumbnails + Google photos rendered above the review grid on results.
+- **Results controls**: Share button, keyword highlighting in review text, and sort/filter on results. Cache timestamps shown with a manual refresh that re-fetches with `nocache=1` (bumps `refreshCount`, busts the Worker cache).
+- **SerpAPI budget**: 100 searches/month shared between **TripAdvisor + Facebook + Trustpilot** (3 routes). All default-on — watch usage at serpapi.com/dashboard. 24hr caching helps significantly; a single non-restaurant search can fire up to 3 SerpAPI calls.
 - **YouTube API quota**: ~71 full queries/day. 2hr caching.
 
 ---
@@ -228,10 +252,12 @@ hearsay/
 │   │   ├── HomePage.jsx            ← Hero, search bar, platform toggle, location badge, history sidebar
 │   │   ├── ResultsPage.jsx         ← Divergence alert, comparison chart, ReviewTabs
 │   │   ├── AboutPage.jsx           ← Mission, Features grid, Technical notes, builder info
+│   │   ├── ErrorPage.jsx           ← Router errorElement (full-page) for route/loader errors
 │   │   └── NotFoundPage.jsx
 │   ├── components/
 │   │   ├── layout/
-│   │   │   ├── Layout.jsx              ← Shared layout wrapper (Header + animated Outlet + Footer)
+│   │   │   ├── Layout.jsx              ← Shared wrapper (Header + ErrorBoundary-wrapped Outlet + Footer)
+│   │   │   ├── ErrorBoundary.jsx       ← Class boundary around Outlet — in-chrome render-crash fallback
 │   │   │   ├── Header.jsx              ← Logo, About link, GitHub link (no theme toggle)
 │   │   │   ├── Footer.jsx              ← LinkedIn link, GitHub link, "Reviews sourced in real time"
 │   │   │   └── SearchHistorySidebar.jsx ← Right-side drawer, last 20 searches, clear all
@@ -273,16 +299,17 @@ hearsay/
     └── src/
         ├── index.js                ← itty-router: OPTIONS first, 7 platform routes
         ├── routes/
-        │   ├── google.js           ← textsearch → Place Details (lat/lng + city support)
-        │   ├── yelp.js             ← Business Search → Reviews (lat/lng + city support)
-        │   ├── reddit.js           ← OAuth token → search + city subreddits (no credentials yet)
-        │   ├── youtube.js          ← Search → video details → commentThreads (2hr cache)
-        │   ├── tripadvisor.js      ← SerpAPI (24hr cache)
-        │   ├── facebook.js         ← SerpAPI fallback (24hr cache)
-        │   └── trustpilot.js       ← HTML fetch → JSON-LD extraction (fragile)
+        │   ├── google.js           ← textsearch → Place Details (lat/lng + city; empty for product)
+        │   ├── yelp.js             ← Business Search → Reviews (lat/lng + city; empty for product)
+        │   ├── reddit.js           ← OAuth token → search + city subreddits (default-on; verify secrets)
+        │   ├── youtube.js          ← Search → video details → commentThreads (2hr cache; buildSearchQuery)
+        │   ├── tripadvisor.js      ← SerpAPI Google engine, site:tripadvisor.com (24hr; empty for product/business)
+        │   ├── facebook.js         ← SerpAPI Google engine, site:facebook.com (24hr; buildSearchQuery)
+        │   └── trustpilot.js       ← SerpAPI Google engine, site:trustpilot.com (24hr; empty for restaurant)
         └── utils/
             ├── cors.js             ← corsHeaders, handleOptions(), addCorsHeaders()
             ├── cache.js            ← Cloudflare Cache API wrapper with TTL
+            ├── relevanceFilter.js  ← filterReviewsForCategory() — strips store/service reviews for products
             └── errors.js           ← errorResponse() helper
 ```
 
@@ -290,10 +317,10 @@ hearsay/
 
 ## Known Issues
 
-- **Reddit**: No credentials — requires accepting Reddit Responsible Builder Policy at reddit.com/prefs/apps. Route is implemented and ready. Just needs secrets added.
-- **Trustpilot**: Scrapes JSON-LD from page HTML. Frequently blocked by Trustpilot's WAF. Returns empty silently (not error). Needs SerpAPI or official API approach.
+- **Reddit**: Now `integrated: true` + `defaultEnabled: true`, so it's queried on every search. Credential status unverified — if `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET` aren't set (check `wrangler secret list`), the call fails silently every search (card hidden). Set them or flip the platform back to coming-soon to stop the wasted request.
+- **Trustpilot**: Migrated to SerpAPI (Google engine, `site:trustpilot.com`). Working. Gated to product/place/business — returns empty for restaurant. Old `v2` HTML-scrape cache keys are bypassed (now `v3:`).
 - **Yelp reviews**: Hard-limited to 3 reviews, 160 chars each by Yelp's API. Reviews endpoint sometimes returns 4xx for non-partner keys. Card shows a note explaining this.
-- **SerpAPI budget**: 100 searches/month shared between TripAdvisor and Facebook. Both are now default-enabled — monitor usage at serpapi.com/dashboard. 24hr caching reduces burn rate.
+- **SerpAPI budget**: 100 searches/month shared between **TripAdvisor + Facebook + Trustpilot** (3 routes, all default-on). A single non-restaurant search can fire 3 calls — monitor at serpapi.com/dashboard. 24hr caching reduces burn rate.
 - **YouTube quota**: ~71 full queries/day at free tier. 2hr caching. Avoid busting cache during dev.
 - **Google textsearch**: Switched from `findplacefromtext` to `textsearch` — handles brand/chain names much better.
 - **Lock file**: `package-lock.json` generated on Windows omits Linux-specific optional deps from native packages. CI uses `npm install` (not `npm ci`) to work around this.
