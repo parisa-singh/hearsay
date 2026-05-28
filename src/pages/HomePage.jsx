@@ -5,11 +5,29 @@ import SearchHistorySidebar from '../components/layout/SearchHistorySidebar'
 import { useUIStore } from '../store/uiStore'
 import { PLATFORMS } from '../constants/platforms'
 
-const EXAMPLE_SEARCHES = ['Nobu NYC', 'Sony WH-1000XM5', 'Airbnb', 'ChatGPT', 'Sweetgreen']
+const EXAMPLE_SEARCHES = [
+  { q: 'Nobu NYC', category: 'restaurant' },
+  { q: 'Sony WH-1000XM5', category: 'product' },
+  { q: 'Airbnb', category: 'business' },
+  { q: 'ChatGPT', category: 'product' },
+  { q: 'Sweetgreen', category: 'restaurant' },
+]
+
+function normalizeItem(item) {
+  if (typeof item === 'string') return { q: item, category: null }
+  return item
+}
+
+function itemHref(item) {
+  const norm = normalizeItem(item)
+  const base = `/hearsay/results?q=${encodeURIComponent(norm.q)}`
+  return norm.category ? `${base}&category=${encodeURIComponent(norm.category)}` : base
+}
 
 export default function HomePage() {
   const { searchHistory, setHistoryOpen } = useUIStore()
   const integratedPlatforms = PLATFORMS.filter(p => p.integrated)
+  const normalizedHistory = searchHistory.map(normalizeItem)
 
   return (
     <main className="flex-1 flex flex-col items-center justify-center px-4 py-16">
@@ -45,26 +63,23 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Example searches */}
-      {searchHistory.length === 0 && (
+      {/* Example / recent searches */}
+      {normalizedHistory.length === 0 ? (
         <div className="mt-8 text-center">
           <p className="text-xs text-zinc-600 mb-3">Try searching for</p>
           <div className="flex flex-wrap gap-2 justify-center">
             {EXAMPLE_SEARCHES.map(ex => (
               <a
-                key={ex}
-                href={`/hearsay/results?q=${encodeURIComponent(ex)}`}
+                key={ex.q}
+                href={itemHref(ex)}
                 className="px-3 py-1.5 rounded-full text-sm text-zinc-400 border border-zinc-800 hover:border-zinc-600 hover:text-zinc-200 transition-all"
               >
-                {ex}
+                {ex.q}
               </a>
             ))}
           </div>
         </div>
-      )}
-
-      {/* Recent searches */}
-      {searchHistory.length > 0 && (
+      ) : (
         <div className="mt-8 text-center">
           <div className="flex items-center justify-center gap-3 mb-3">
             <p className="text-xs text-zinc-600">Recent searches</p>
@@ -76,13 +91,13 @@ export default function HomePage() {
             </button>
           </div>
           <div className="flex flex-wrap gap-2 justify-center">
-            {searchHistory.slice(0, 5).map(q => (
+            {normalizedHistory.slice(0, 5).map(item => (
               <a
-                key={q}
-                href={`/hearsay/results?q=${encodeURIComponent(q)}`}
+                key={item.q}
+                href={itemHref(item)}
                 className="px-3 py-1.5 rounded-full text-sm text-zinc-400 border border-zinc-800 hover:border-zinc-600 hover:text-zinc-200 transition-all"
               >
-                {q}
+                {item.q}
               </a>
             ))}
           </div>

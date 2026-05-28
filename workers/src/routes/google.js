@@ -9,8 +9,14 @@ export async function googleHandler(request, env) {
   const query = searchParams.get('query')
   const lat = searchParams.get('lat')
   const lng = searchParams.get('lng')
+  const category = searchParams.get('category')
 
   if (!query) return errorResponse('Missing query parameter', 400)
+
+  // Google Places API is location-biased — not suitable for product searches
+  if (category === 'product') {
+    return Response.json({ platform: 'google', reviews: [], reviewCount: null, rating: null })
+  }
 
   const cacheKey = `google:${query}:${lat ?? ''}:${lng ?? ''}`
   const cached = await getCached(cacheKey)

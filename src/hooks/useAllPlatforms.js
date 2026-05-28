@@ -4,7 +4,7 @@ import { queryKeys } from '../constants/queryKeys'
 import { useUIStore } from '../store/uiStore'
 import { PLATFORMS } from '../constants/platforms'
 
-export function useAllPlatforms(query) {
+export function useAllPlatforms(query, category = null) {
   const { isPlatformEnabled, location } = useUIStore()
 
   const enabledPlatforms = PLATFORMS.filter(
@@ -17,8 +17,8 @@ export function useAllPlatforms(query) {
 
   const queries = useQueries({
     queries: enabledPlatforms.map(platform => ({
-      queryKey: queryKeys.platform(platform.id, query, location),
-      queryFn: () => fetchPlatform(platform.endpoint, { query, ...locationParams }),
+      queryKey: queryKeys.platform(platform.id, query, location, category),
+      queryFn: () => fetchPlatform(platform.endpoint, { query, category, ...locationParams }),
       enabled: Boolean(query),
       staleTime: 5 * 60 * 1000,
       retry: 0,

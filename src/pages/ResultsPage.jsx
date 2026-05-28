@@ -11,13 +11,14 @@ import { calculateDivergence } from '../utils/divergence'
 export default function ResultsPage() {
   const [searchParams] = useSearchParams()
   const query = searchParams.get('q') ?? ''
+  const category = searchParams.get('category') ?? null
   const { location, addToHistory } = useUIStore()
 
   useEffect(() => {
-    if (query) addToHistory(query)
-  }, [query, addToHistory])
+    if (query) addToHistory(query, category)
+  }, [query, category, addToHistory])
 
-  const { results, isAnyLoading, successfulResults } = useAllPlatforms(query)
+  const { results, isAnyLoading, successfulResults } = useAllPlatforms(query, category)
 
   const ratedResults = successfulResults.filter(r => r.data?.rating != null)
   const divergence = calculateDivergence(successfulResults)
@@ -26,7 +27,7 @@ export default function ResultsPage() {
     <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-8 space-y-6">
       {/* Compact search bar */}
       <div className="max-w-2xl">
-        <SearchBar initialValue={query} compact />
+        <SearchBar initialValue={query} initialCategory={category} compact />
       </div>
 
       {/* Page title */}

@@ -10,8 +10,14 @@ export async function yelpHandler(request, env) {
   const lat = searchParams.get('lat')
   const lng = searchParams.get('lng')
   const city = searchParams.get('city')
+  const category = searchParams.get('category')
 
   if (!query) return errorResponse('Missing query parameter', 400)
+
+  // Yelp is a business directory — not relevant for product searches
+  if (category === 'product') {
+    return Response.json({ platform: 'yelp', reviews: [], reviewCount: null, rating: null })
+  }
 
   const cacheKey = `yelp:${query}:${lat ?? ''}:${lng ?? ''}`
   const cached = await getCached(cacheKey)

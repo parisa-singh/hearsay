@@ -57,14 +57,17 @@ export default function PlatformToggle() {
   const city = location?.city ?? null
 
   const [showBanner, setShowBanner] = useState(false)
+  const [isFading, setIsFading] = useState(false)
   const prevCountryCode = useRef(null)
 
   useEffect(() => {
     if (countryCode && countryCode !== prevCountryCode.current) {
       prevCountryCode.current = countryCode
       setShowBanner(true)
-      const t = setTimeout(() => setShowBanner(false), 3000)
-      return () => clearTimeout(t)
+      setIsFading(false)
+      const fadeTimer = setTimeout(() => setIsFading(true), 2500)
+      const hideTimer = setTimeout(() => { setShowBanner(false); setIsFading(false) }, 3100)
+      return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer) }
     }
   }, [countryCode])
 
@@ -94,6 +97,21 @@ export default function PlatformToggle() {
 
   return (
     <div className="space-y-3">
+      {/* Region banner — shown first so it's seen immediately */}
+      {showBanner && (
+        <button
+          onClick={() => { setShowBanner(false); setIsFading(false) }}
+          className="w-full text-center text-xs text-zinc-500 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 animate-fade-in hover:border-zinc-700 transition-colors"
+          style={{ opacity: isFading ? 0 : 1, transition: 'opacity 600ms ease-out' }}
+        >
+          Showing platforms popular in {city ?? location.country}
+          {' · '}<span className="text-green-400">{integrated.length} available now</span>
+          {comingSoon.length > 0 && (
+            <>{' · '}<span className="text-zinc-600">{comingSoon.length} coming soon</span></>
+          )}
+        </button>
+      )}
+
       <div>
         <p className="text-xs text-zinc-500 text-center mb-2">
           Popular in {city ?? location.country}
@@ -121,19 +139,6 @@ export default function PlatformToggle() {
           </div>
         )}
       </div>
-
-      {showBanner && (
-        <button
-          onClick={() => setShowBanner(false)}
-          className="w-full text-center text-xs text-zinc-500 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 animate-fade-in hover:border-zinc-700 transition-colors"
-        >
-          Showing platforms popular in {city ?? location.country}
-          {' · '}<span className="text-green-400">{integrated.length} available now</span>
-          {comingSoon.length > 0 && (
-            <>{' · '}<span className="text-zinc-600">{comingSoon.length} coming soon</span></>
-          )}
-        </button>
-      )}
     </div>
   )
 }

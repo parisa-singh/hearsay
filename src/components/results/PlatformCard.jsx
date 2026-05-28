@@ -39,6 +39,64 @@ function PlatformCardError({ platform, error }) {
   )
 }
 
+function YelpCompactCard({ platform, data }) {
+  const { rating, reviewCount, sourceUrl } = data ?? {}
+  const colors = sentimentColor(rating)
+
+  return (
+    <div
+      className="rounded-xl border bg-zinc-900 p-4 transition-all duration-300 animate-slide-up hover:border-zinc-700 flex flex-col gap-3"
+      style={{ borderColor: `${platform.brandColor}30` }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <img
+            src={platform.logo}
+            alt={platform.displayName}
+            width={26}
+            height={26}
+            className="rounded-sm shrink-0"
+            onError={e => { e.target.style.display = 'none' }}
+          />
+          <div>
+            <span className="text-sm font-semibold text-zinc-200">{platform.displayName}</span>
+            {reviewCount && (
+              <span className="block text-xs text-zinc-500">{formatReviewCount(reviewCount)}</span>
+            )}
+          </div>
+        </div>
+        {rating != null && (
+          <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold border shrink-0 ${colors.text} ${colors.bg} ${colors.border}`}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            {Number(rating).toFixed(1)}
+          </div>
+        )}
+      </div>
+
+      <p className="text-xs text-zinc-600">
+        Yelp review previews aren't available via the public API.
+      </p>
+
+      {sourceUrl && (
+        <a
+          href={sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs font-medium inline-flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+          style={{ color: platform.brandColor }}
+        >
+          See all reviews on Yelp
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>
+          </svg>
+        </a>
+      )}
+    </div>
+  )
+}
+
 function getExternalUrl(platform, data, query) {
   if (data?.sourceUrl) return data.sourceUrl
   if (platform.id === 'reddit') return `https://www.reddit.com/search?q=${encodeURIComponent(query + ' review')}&sort=relevance`
@@ -52,6 +110,8 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
 
   if (isLoading) return <PlatformCardSkeleton />
   if (isError || !data) return <PlatformCardError platform={platform} error={error} />
+
+  if (platform.id === 'yelp') return <YelpCompactCard platform={platform} data={data} />
 
   const { rating, reviewCount, reviews = [] } = data
   const colors = sentimentColor(rating)
@@ -134,15 +194,6 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
           </>
         )}
       </div>
-
-      {/* Yelp API limitation note */}
-      {platform.id === 'yelp' && (
-        <p className="text-xs text-zinc-600 mt-3">
-          {reviews.length > 0
-            ? 'Yelp limits API previews to 3 snippets'
-            : 'Yelp review previews unavailable via API'}
-        </p>
-      )}
 
       {/* External link for non-YouTube platforms */}
       {!isYouTube && externalUrl && (

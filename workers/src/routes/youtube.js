@@ -4,14 +4,40 @@ import { errorResponse } from '../utils/errors.js'
 const YT_BASE = 'https://www.googleapis.com/youtube/v3'
 const CACHE_TTL = 2 * 3600
 
+// Filters out low-signal comments (reactions, sub begging, noise)
+function isQualityComment(text) {
+  if (!text || text.length < 35) return false
+  // Filter "X subs" / subscriber-beg comments
+  if (/\d+\s*(?:k\s*)?subs(?:cribers)?/i.test(text) && text.length < 80) return false
+  // Filter pure emoji/reaction lines
+  if (/^[\s\p{Emoji}\p{Emoji_Presentation}!.]+$/u.test(text)) return false
+  return true
+}
+
+function buildSearchQuery(query, city, category) {
+  switch (category) {
+    case 'product':
+      return `${query} review`
+    case 'restaurant':
+      return city ? `${query} ${city} restaurant review` : `${query} restaurant food review`
+    case 'place':
+      return city ? `${query} ${city} visit review` : `${query} travel visit review`
+    case 'business':
+      return city ? `${query} ${city} review` : `${query} review experience`
+    default:
+      return city ? `${query} ${city} review` : `${query} review`
+  }
+}
+
 export async function youtubeHandler(request, env) {
   const { searchParams } = new URL(request.url)
   const query = searchParams.get('query')
   const city = searchParams.get('city')
+  const category = searchParams.get('category')
 
   if (!query) return errorResponse('Missing query parameter', 400)
 
-  const searchQuery = city ? `${query} ${city} review` : `${query} review`
+  const searchQuery = buildSearchQuery(query, city, category)
   const cacheKey = `youtube:${searchQuery}`
   const cached = await getCached(cacheKey)
   if (cached) return Response.json(cached)
@@ -58,20 +84,22 @@ export async function youtubeHandler(request, env) {
         const cP = new URLSearchParams({
           part: 'snippet',
           videoId: vid,
-          maxResults: '8',
+          maxResults: '10',
           order: 'relevance',
           key: env.YOUTUBE_API_KEY,
         })
         const cRes = await fetch(`${YT_BASE}/commentThreads?${cP}`)
         const cData = await cRes.json()
-        return (cData.items ?? []).map(c => ({
-          text: c.snippet?.topLevelComment?.snippet?.textDisplay ?? '',
-          rating: null,
-          author: c.snippet?.topLevelComment?.snippet?.authorDisplayName ?? null,
-          date: c.snippet?.topLevelComment?.snippet?.publishedAt ?? null,
-          url: `https://youtube.com/watch?v=${vid}`,
-          videoTitle: v.snippet?.title ?? null,
-        }))
+        return (cData.items ?? [])
+          .map(c => ({
+            text: c.snippet?.topLevelComment?.snippet?.textDisplay ?? '',
+            rating: null,
+            author: c.snippet?.topLevelComment?.snippet?.authorDisplayName ?? null,
+            date: c.snippet?.topLevelComment?.snippet?.publishedAt ?? null,
+            url: `https://youtube.com/watch?v=${vid}`,
+            videoTitle: v.snippet?.title ?? null,
+          }))
+          .filter(c => isQualityComment(c.text))
       } catch {
         return []
       }

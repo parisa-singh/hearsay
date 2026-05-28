@@ -4,14 +4,28 @@ import { errorResponse } from '../utils/errors.js'
 const SERPAPI_BASE = 'https://serpapi.com/search'
 const CACHE_TTL = 24 * 3600
 
+function buildSearchQuery(query, city, category) {
+  switch (category) {
+    case 'product':
+      return `${query} review`
+    case 'restaurant':
+      return city ? `${query} ${city} restaurant` : `${query} restaurant`
+    case 'place':
+      return city ? `${query} ${city}` : query
+    default:
+      return city ? `${query} ${city}` : query
+  }
+}
+
 export async function facebookHandler(request, env) {
   const { searchParams } = new URL(request.url)
   const query = searchParams.get('query')
   const city = searchParams.get('city')
+  const category = searchParams.get('category')
 
   if (!query) return errorResponse('Missing query parameter', 400)
 
-  const searchQuery = city ? `${query} ${city}` : query
+  const searchQuery = buildSearchQuery(query, city, category)
   const cacheKey = `facebook:${searchQuery}`
   const cached = await getCached(cacheKey)
   if (cached) return Response.json(cached)
@@ -45,7 +59,7 @@ export async function facebookHandler(request, env) {
       name: query,
       rating: null,
       reviewCount: results.length,
-      label: 'Facebook Mentions', // displayed as "mentions" not "reviews"
+      label: 'Facebook Mentions',
       reviews,
     }
 

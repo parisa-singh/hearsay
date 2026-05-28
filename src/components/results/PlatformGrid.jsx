@@ -18,7 +18,7 @@ export default function PlatformGrid({ results, query }) {
   const sorted = [...visible].sort((a, b) => platformSortScore(a) - platformSortScore(b))
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
       {sorted.map(({ platform, data, isLoading, isError, error }) => (
         <PlatformCard
           key={platform.id}

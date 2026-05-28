@@ -8,8 +8,14 @@ export async function tripadvisorHandler(request, env) {
   const { searchParams } = new URL(request.url)
   const query = searchParams.get('query')
   const city = searchParams.get('city')
+  const category = searchParams.get('category')
 
   if (!query) return errorResponse('Missing query parameter', 400)
+
+  // TripAdvisor covers restaurants, hotels, attractions — not products or generic businesses
+  if (category === 'product' || category === 'business') {
+    return Response.json({ platform: 'tripadvisor', reviews: [], reviewCount: null, rating: null })
+  }
 
   const searchQuery = city ? `${query} ${city}` : query
   const cacheKey = `tripadvisor:${searchQuery}`
