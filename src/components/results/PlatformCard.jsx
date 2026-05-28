@@ -48,25 +48,14 @@ export function YelpWideCard({ platform, data }) {
       className="rounded-xl border bg-zinc-900 px-3 sm:px-5 py-3 sm:py-4 flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 transition-all duration-300 animate-slide-up hover:border-zinc-600"
       style={{ borderColor: `${platform.brandColor}25` }}
     >
-      {/* Identity */}
       <div className="flex items-center gap-3 shrink-0">
-        <img
-          src={platform.logo}
-          alt={platform.displayName}
-          width={30}
-          height={30}
-          className="rounded-sm shrink-0"
-          onError={e => { e.target.style.display = 'none' }}
-        />
+        <img src={platform.logo} alt={platform.displayName} width={30} height={30} className="rounded-sm shrink-0" onError={e => { e.target.style.display = 'none' }} />
         <div>
           <span className="text-sm font-semibold text-zinc-200 block">{platform.displayName}</span>
-          {reviewCount && (
-            <span className="text-xs text-zinc-500">{formatReviewCount(reviewCount)}</span>
-          )}
+          {reviewCount && <span className="text-xs text-zinc-500">{formatReviewCount(reviewCount)}</span>}
         </div>
       </div>
 
-      {/* Rating */}
       {rating != null && (
         <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-semibold border shrink-0 ${colors.text} ${colors.bg} ${colors.border}`}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
@@ -76,20 +65,13 @@ export function YelpWideCard({ platform, data }) {
         </div>
       )}
 
-      {/* Divider */}
       <div className="hidden sm:block h-8 w-px bg-zinc-700 shrink-0" />
-
-      {/* Note */}
       <p className="text-sm text-zinc-400 flex-1 min-w-0">
         Yelp limits review previews via their public API — the full listing has complete reviews.
       </p>
 
-      {/* CTA */}
       {sourceUrl && (
-        <a
-          href={sourceUrl}
-          target="_blank"
-          rel="noopener noreferrer"
+        <a href={sourceUrl} target="_blank" rel="noopener noreferrer"
           className="shrink-0 flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg border transition-all hover:opacity-80"
           style={{ color: platform.brandColor, borderColor: `${platform.brandColor}50` }}
         >
@@ -117,17 +99,11 @@ function formatAge(ts) {
   return `${Math.floor(min / 60)}h ago`
 }
 
-export default function PlatformCard({ platformId, data, isLoading, isError, error, query }) {
+// All hooks live here — no early returns allowed above this component
+function PlatformCardContent({ platform, data, query }) {
   const [displayCount, setDisplayCount] = useState(INITIAL_COUNT)
   const [filterRating, setFilterRating] = useState(null)
   const [sortOrder, setSortOrder] = useState('default')
-  const platform = PLATFORM_MAP[platformId]
-  if (!platform) return null
-
-  if (isLoading) return <PlatformCardSkeleton />
-  if (isError || !data) return <PlatformCardError platform={platform} error={error} />
-
-  if (platform.id === 'yelp') return <YelpWideCard platform={platform} data={data} />
 
   const { rating, reviewCount, reviews = [], fetchedAt } = data
   const colors = sentimentColor(rating)
@@ -136,7 +112,6 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
   const isYouTube = platform.id === 'youtube'
   const brandColor = platform.brandColor
 
-  // Filter + sort
   const hasRatedReviews = reviews.some(r => r.rating != null)
   const hasDates = reviews.some(r => r.date != null)
   const availableStars = hasRatedReviews
@@ -165,14 +140,7 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-2 sm:mb-4">
         <div className="flex items-center gap-2 min-w-0">
-          <img
-            src={platform.logo}
-            alt={platform.displayName}
-            width={26}
-            height={26}
-            className="rounded-sm shrink-0"
-            onError={e => { e.target.style.display = 'none' }}
-          />
+          <img src={platform.logo} alt={platform.displayName} width={26} height={26} className="rounded-sm shrink-0" onError={e => { e.target.style.display = 'none' }} />
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-sm font-semibold text-zinc-200 truncate">{label}</span>
@@ -181,12 +149,8 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
               )}
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
-              {reviewCount && (
-                <span className="text-xs text-zinc-500">{formatReviewCount(reviewCount)}</span>
-              )}
-              {fetchedAt && (
-                <span className="text-xs text-zinc-700">{formatAge(fetchedAt)}</span>
-              )}
+              {reviewCount && <span className="text-xs text-zinc-500">{formatReviewCount(reviewCount)}</span>}
+              {fetchedAt && <span className="text-xs text-zinc-700">{formatAge(fetchedAt)}</span>}
             </div>
           </div>
         </div>
@@ -223,20 +187,7 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
           )}
           {hasDates && (
             <div className="flex items-center gap-1 ml-auto">
-              {['newest', 'oldest'].map(order => (
-                <button
-                  key={order}
-                  onClick={() => setSortOrder(s => s === order ? 'default' : order)}
-                  className={`text-xs px-2 py-0.5 rounded-full border capitalize transition-all ${
-                    sortOrder === order
-                      ? 'border-white/30 bg-white/10 text-white'
-                      : 'border-zinc-700 text-zinc-600 hover:text-zinc-300 hover:border-zinc-600'
-                  }`}
-                >
-                  {order}
-                </button>
-              ))}
-              {hasRatedReviews && ['highest', 'lowest'].map(order => (
+              {['newest', 'oldest', ...(hasRatedReviews ? ['highest', 'lowest'] : [])].map(order => (
                 <button
                   key={order}
                   onClick={() => setSortOrder(s => s === order ? 'default' : order)}
@@ -266,22 +217,17 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
               <ReviewItem key={i} review={review} platformId={platform.id} brandColor={brandColor} query={query} />
             ))}
 
-            {/* YouTube inline controls */}
             {isYouTube && (hasMore || displayCount > INITIAL_COUNT) && (
               <div className="mt-3 flex items-center gap-3">
                 {hasMore && (
-                  <button
-                    onClick={() => setDisplayCount(c => c + LOAD_MORE_COUNT)}
-                    className="text-xs font-medium text-zinc-500 hover:text-zinc-300 transition-colors"
-                  >
+                  <button onClick={() => setDisplayCount(c => c + LOAD_MORE_COUNT)}
+                    className="text-xs font-medium text-zinc-500 hover:text-zinc-300 transition-colors">
                     Load more ({processedReviews.length - displayCount} remaining)
                   </button>
                 )}
                 {displayCount > INITIAL_COUNT && (
-                  <button
-                    onClick={() => setDisplayCount(INITIAL_COUNT)}
-                    className="text-xs font-medium text-zinc-600 hover:text-zinc-400 transition-colors"
-                  >
+                  <button onClick={() => setDisplayCount(INITIAL_COUNT)}
+                    className="text-xs font-medium text-zinc-600 hover:text-zinc-400 transition-colors">
                     Show less
                   </button>
                 )}
@@ -291,12 +237,9 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
         )}
       </div>
 
-      {/* External link for non-YouTube platforms */}
+      {/* External link */}
       {!isYouTube && externalUrl && (
-        <a
-          href={externalUrl}
-          target="_blank"
-          rel="noopener noreferrer"
+        <a href={externalUrl} target="_blank" rel="noopener noreferrer"
           className="mt-4 text-xs font-medium transition-colors hover:opacity-80 inline-flex items-center gap-1 shrink-0"
           style={{ color: platform.brandColor }}
         >
@@ -308,4 +251,14 @@ export default function PlatformCard({ platformId, data, isLoading, isError, err
       )}
     </div>
   )
+}
+
+// Routes to the right subcomponent — no hooks here so early returns are safe
+export default function PlatformCard({ platformId, data, isLoading, isError, error, query }) {
+  const platform = PLATFORM_MAP[platformId]
+  if (!platform) return null
+  if (isLoading) return <PlatformCardSkeleton />
+  if (isError || !data) return <PlatformCardError platform={platform} error={error} />
+  if (platform.id === 'yelp') return <YelpWideCard platform={platform} data={data} />
+  return <PlatformCardContent platform={platform} data={data} query={query} />
 }
