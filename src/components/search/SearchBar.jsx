@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUIStore } from '../../store/uiStore'
+import { trackEvent } from '../../utils/analytics'
 
 const CATEGORIES = [
   { id: 'restaurant', label: 'Restaurant / Café' },
@@ -22,6 +23,8 @@ export default function SearchBar({ initialValue = '', initialCategory = null, c
     const q = value.trim()
     if (!q || !category) return
     addToHistory(q, category)
+    // GA4 custom event — this is the "how many searches" number.
+    trackEvent('search', { search_term: q, category, compact })
     navigate(`/results?q=${encodeURIComponent(q)}&category=${encodeURIComponent(category)}`)
   }
 
