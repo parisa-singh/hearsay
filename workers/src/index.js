@@ -1,6 +1,7 @@
 import { Router } from 'itty-router'
 import { handleOptions, addCorsHeaders } from './utils/cors.js'
 import { errorResponse } from './utils/errors.js'
+import { checkRateLimit } from './utils/rateLimit.js'
 import { googleHandler } from './routes/google.js'
 import { yelpHandler } from './routes/yelp.js'
 import { redditHandler } from './routes/reddit.js'
@@ -48,6 +49,19 @@ router.all('*', () => errorResponse('Not found', 404))
 
 export default {
   async fetch(request, env, ctx) {
+    // Per-IP rate limit — but never throttle CORS preflight, or browsers
+    // couldn't complete the request that a 429 is meant to explain.
+    if (request.method !== 'OPTIONS') {
+      const { allowed } = await checkRateLimit(request, env)
+      if (!allowed) {
+        const limited = Response.json(
+          { error: 'Rate limit exceeded. Please slow down and try again shortly.', status: 'error' },
+          { status: 429, headers: { 'Retry-After': '60' } }
+        )
+        return addCorsHeaders(limited, request)
+      }
+    }
+
     const response = await router.handle(request, env, ctx)
       .catch(err => errorResponse(err.message ?? 'Internal server error'))
     return addCorsHeaders(response, request)
