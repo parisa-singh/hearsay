@@ -38,6 +38,7 @@ Read this file first before doing anything else in a new session.
 | Serverless API | Cloudflare Workers | itty-router v4 |
 | Deployment | GitHub Actions → GitHub Pages | `npm install` + `vite build` + deploy-pages |
 | Testing | Vitest + jsdom + Testing Library | `npm test` runs 34 tests |
+| Analytics | Google Analytics 4 (gtag.js) | Env-gated via `VITE_GA_MEASUREMENT_ID`; page views + `search` event. No ID = no-op |
 
 ---
 
@@ -67,6 +68,8 @@ GET  /trustpilot    → SerpAPI (Google engine, site:trustpilot.com, 24hr cache,
 - `useAllPlatforms.js` filters to `p.integrated === true` — coming-soon platforms are never queried
 - **Category-aware querying**: every search carries a `category` (`restaurant` | `product` | `place` | `business`, chosen via pills in `SearchBar.jsx`). Each route shapes/gates by category — see the "Category Handling" table below. The `category` is part of each route's cache key (or baked into the search string) so cross-category requests don't serve each other's results.
 - **3 routes share SerpAPI**: TripAdvisor + Facebook + Trustpilot all call SerpAPI's Google engine against one 100-search/month budget. A single non-restaurant search can fire up to 3 SerpAPI calls (minus 24hr cache hits)
+- **Per-IP rate limiting**: `workers/src/index.js` calls `checkRateLimit()` before routing (except OPTIONS). Uses Cloudflare's native `RATE_LIMITER` binding (`[[unsafe.bindings]]` in `wrangler.toml`), keyed on `CF-Connecting-IP`, 60 req/60s per IP. CORS only restrains browsers — this stops non-browser (curl) abuse of the shared quotas. **Fail-open**: missing binding/IP or a limiter error allows the request. Over-limit → `429` + `Retry-After`. Activates only on `wrangler deploy` (Workers don't deploy via CI).
+- **Analytics (GA4)**: `src/utils/analytics.js` wraps gtag; init in `main.jsx`, manual `page_view` per route change in `Layout.jsx` (SPA-aware, `send_page_view:false`), custom `search` event in `SearchBar.jsx`. Reads `VITE_GA_MEASUREMENT_ID` (measurement ID `G-M63F6NVM6J`) — unset = fully disabled, no gtag script.
 
 ---
 
@@ -75,8 +78,9 @@ GET  /trustpilot    → SerpAPI (Google engine, site:trustpilot.com, 24hr cache,
 **Frontend** (`.env.local`, gitignored):
 ```
 VITE_API_BASE_URL=https://hearsay-api.parisa-singh.workers.dev
+VITE_GA_MEASUREMENT_ID=G-M63F6NVM6J   # GA4; optional — unset disables analytics entirely
 ```
-Also set as a GitHub Actions repo secret so production builds pick it up.
+Both must also be set as GitHub Actions repo secrets so production builds pick them up (they're baked in at build time by Vite).
 
 **Workers** (set via `cd workers && npx wrangler secret put <NAME>`):
 ```
@@ -87,6 +91,7 @@ SERPAPI_KEY           — SerpAPI key (TripAdvisor + Facebook + Trustpilot route
 REDDIT_CLIENT_ID      — Reddit app client ID (status unverified — run `wrangler secret list`)
 REDDIT_CLIENT_SECRET  — Reddit app client secret (status unverified)
 ```
+The rate-limiter is **not** a secret — it's the `RATE_LIMITER` `[[unsafe.bindings]]` block in `wrangler.toml` (committed). Tune `limit`/`period` there and re-`wrangler deploy`.
 
 ---
 
@@ -227,10 +232,12 @@ gh run list --limit 5
 
 **Frontend**: Push to `main` → GitHub Actions runs `.github/workflows/deploy.yml`:
 1. `npm install` (not `npm ci` — lock file has cross-platform optional dep issues on Windows→Linux)
-2. `npm run build` with `VITE_API_BASE_URL` injected from repo secret
+2. `npm run build` with `VITE_API_BASE_URL` and `VITE_GA_MEASUREMENT_ID` injected from repo secrets
 3. `dist/` uploaded via `actions/upload-pages-artifact` + deployed via `actions/deploy-pages`
 
-**Workers**: Manual — `cd workers && npx wrangler deploy`. Secrets go live immediately after `wrangler secret put`, no redeploy needed.
+> Editing `.github/workflows/deploy.yml` via `git push` is blocked in this environment (token lacks `workflow` scope) — use GitHub's web editor for workflow changes. See [[reference-ops-gotchas]] in memory.
+
+**Workers**: Manual — `cd workers && npx wrangler deploy`. Secrets go live immediately after `wrangler secret put`, no redeploy needed. **Config changes (incl. the `RATE_LIMITER` rate-limit binding) require a `wrangler deploy` to take effect** — they don't go live via CI.
 
 ---
 
@@ -281,7 +288,8 @@ hearsay/
 │   │   ├── divergence.js           ← calculateDivergence() — 1.5+ star gap detection
 │   │   ├── platformRegions.js      ← getPlatformTiers(countryCode) — 7 platforms per region
 │   │   ├── formatters.js           ← Rating display, relative date, text truncation
-│   │   └── sentimentColor.js       ← Rating number → Tailwind color classes
+│   │   ├── sentimentColor.js       ← Rating number → Tailwind color classes
+│   │   └── analytics.js            ← GA4 gtag wrapper: initGA/trackPageView/trackEvent (env-gated no-op)
 │   ├── constants/
 │   │   ├── platforms.js            ← PLATFORMS array — single source of truth for all platforms
 │   │   │                             integrated: true = queried; integrated: false = coming-soon only
@@ -295,9 +303,9 @@ hearsay/
 │       ├── platformGrid.test.js
 │       └── divergence.test.js
 └── workers/
-    ├── wrangler.toml               ← name: hearsay-api, nodejs_compat
+    ├── wrangler.toml               ← name: hearsay-api, nodejs_compat, RATE_LIMITER binding
     └── src/
-        ├── index.js                ← itty-router: OPTIONS first, 7 platform routes
+        ├── index.js                ← itty-router: OPTIONS first, per-IP rate limit, 7 platform routes
         ├── routes/
         │   ├── google.js           ← textsearch → Place Details (lat/lng + city; empty for product)
         │   ├── yelp.js             ← Business Search → Reviews (lat/lng + city; empty for product)
@@ -309,6 +317,7 @@ hearsay/
         └── utils/
             ├── cors.js             ← corsHeaders, handleOptions(), addCorsHeaders()
             ├── cache.js            ← Cloudflare Cache API wrapper with TTL
+            ├── rateLimit.js        ← checkRateLimit() — native RATE_LIMITER binding, per-IP, fail-open
             ├── relevanceFilter.js  ← filterReviewsForCategory() — strips store/service reviews for products
             └── errors.js           ← errorResponse() helper
 ```

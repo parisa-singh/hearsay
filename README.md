@@ -2,16 +2,17 @@
 
 > What are people *really* saying?
 
-[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev)
-[![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev)
+[![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com)
-[![Claude AI](https://img.shields.io/badge/Claude-AI-D97757?logo=anthropic&logoColor=white)](https://anthropic.com)
 [![GitHub Pages](https://img.shields.io/badge/GitHub-Pages-222?logo=github&logoColor=white)](https://parisa-singh.github.io/hearsay)
 
-**Hearsay** is a cross-platform review aggregator that queries 7 major platforms in parallel and synthesizes the results with AI — giving you the full, unfiltered picture instead of a skewed view from a single source.
+**Hearsay** is a cross-platform review aggregator that queries 7 major platforms in parallel and shows their reviews side-by-side — giving you the full, unfiltered picture instead of a skewed view from a single source.
 
 The name is intentional: *hearsay* means word of mouth, what people are saying — which is exactly what reviews are.
+
+**No AI synthesis.** Hearsay never rewrites, summarizes, or "decides" for you. Disagreement between platforms is detected **algorithmically** (a 1.5+ star gap), so the divergence you see is a fact about the data, not an opinion from a model.
 
 **[Live Demo →](https://parisa-singh.github.io/hearsay)**
 
@@ -19,13 +20,13 @@ The name is intentional: *hearsay* means word of mouth, what people are saying �
 
 ## What It Does
 
-1. You search for anything — a restaurant, product, or place
-2. Hearsay queries **Google, Yelp, Reddit, YouTube, TripAdvisor, Facebook, and Trustpilot** simultaneously
-3. Results are split into **Global Reviews** and **Near You** (location-aware)
-4. Claude AI synthesizes a 3–4 sentence **"The Hearsay"** summary across all platforms
-5. Visual tags surface recurring **positive themes** and **concerns**
-6. A **Divergence Alert** fires when platforms strongly disagree
-7. A **Fake Review Signal** flags suspicious rating patterns
+1. You search for anything — a restaurant, product, place, or business — and pick a category
+2. Hearsay queries **Google, Yelp, Reddit, YouTube, TripAdvisor, Facebook, and Trustpilot** simultaneously (`useQueries` — one platform failing never blocks the rest)
+3. Results are split into **Global Reviews** and **Near You** (location-aware, via geolocation or manual city entry)
+4. Reviews are shown **side-by-side per platform** — no single algorithm's verdict
+5. A **Divergence Alert** fires when two platforms disagree by 1.5+ stars — computed in `src/utils/divergence.js`, no AI
+6. A **comparison chart** (radar + bars) visualizes how ratings spread across platforms
+7. **Regional coming-soon chips** show what's available vs. in-progress per country
 
 ---
 
@@ -33,13 +34,16 @@ The name is intentional: *hearsay* means word of mouth, what people are saying �
 
 | Layer | Technology |
 |---|---|
-| Frontend | Vite + React 18 |
-| Styling | Tailwind CSS + shadcn/ui |
-| Server state | TanStack Query v5 |
-| UI state | Zustand |
-| Charts | Recharts |
-| Serverless API | Cloudflare Workers |
-| AI synthesis | Claude API (claude-sonnet-4-20250514) |
+| Frontend | Vite + React 19 |
+| Language | JavaScript (ES2022+) |
+| Styling | Tailwind CSS v3 |
+| Server state | TanStack Query v5 (`useQueries` for parallel fetching) |
+| UI state | Zustand v5 (persisted history, location) |
+| Charts | Recharts v2 |
+| Routing | React Router v7 |
+| Serverless API | Cloudflare Workers (itty-router) |
+| Analytics | Google Analytics 4 (env-gated) |
+| Testing | Vitest + jsdom + Testing Library (34 tests) |
 | Deployment | GitHub Actions → GitHub Pages |
 
 ---
@@ -47,14 +51,16 @@ The name is intentional: *hearsay* means word of mouth, what people are saying �
 ## Architecture
 
 ```
-GitHub Pages (static frontend)
+GitHub Pages (static Vite build)
         ↕ HTTPS fetch
-Cloudflare Workers (API proxy layer)
+Cloudflare Workers (API proxy layer — per-IP rate limited, response caching)
         ↕
-Google Places · Yelp · Reddit · YouTube · SerpAPI · Trustpilot · Claude
+Google Places · Yelp · Reddit · YouTube · SerpAPI (TripAdvisor / Facebook / Trustpilot)
 ```
 
-All API secrets live in Cloudflare Workers environment — never in client-side code.
+- All API secrets live in Cloudflare Workers environment — never in client-side code.
+- The Worker rate-limits per IP (`CF-Connecting-IP`, 60 req/60s, fail-open) so the shared API quotas can't be drained by non-browser clients — CORS alone only restrains browsers.
+- Responses are cached via the Cloudflare Cache API (SerpAPI routes 24h, YouTube 2h) to protect quotas and cut latency.
 
 ---
 
@@ -70,36 +76,41 @@ npm install
 
 # 3. Create local env file
 cp .env.example .env.local
-# Fill in VITE_API_BASE_URL with your Cloudflare Worker URL
+# Fill in VITE_API_BASE_URL (your Worker URL); VITE_GA_MEASUREMENT_ID is optional
 
-# 4. Start dev server
+# 4. Start dev server (http://localhost:5173/hearsay/)
 npm run dev
 
 # 5. (Separate terminal) Start Workers locally
 cd workers
 npx wrangler dev
+
+# Run tests
+npm test
 ```
 
 ### Required Environment Variables
 
 | Variable | Where | Description |
 |---|---|---|
-| `VITE_API_BASE_URL` | `.env.local` | Cloudflare Workers base URL |
-| `GOOGLE_API_KEY` | Wrangler secret | Google Places API key |
+| `VITE_API_BASE_URL` | `.env.local` + repo secret | Cloudflare Workers base URL |
+| `VITE_GA_MEASUREMENT_ID` | `.env.local` + repo secret | GA4 measurement ID (optional — unset disables analytics) |
+| `GOOGLE_API_KEY` | Wrangler secret | Google Places + YouTube Data API v3 (same key) |
 | `YELP_API_KEY` | Wrangler secret | Yelp Fusion API key |
 | `REDDIT_CLIENT_ID` | Wrangler secret | Reddit app client ID |
 | `REDDIT_CLIENT_SECRET` | Wrangler secret | Reddit app client secret |
-| `YOUTUBE_API_KEY` | Wrangler secret | YouTube Data API v3 key |
-| `SERPAPI_KEY` | Wrangler secret | SerpAPI key |
-| `ANTHROPIC_API_KEY` | Wrangler secret | Anthropic Claude API key |
+| `YOUTUBE_API_KEY` | Wrangler secret | Same key as `GOOGLE_API_KEY` |
+| `SERPAPI_KEY` | Wrangler secret | SerpAPI key (TripAdvisor + Facebook + Trustpilot) |
+
+The per-IP rate limiter is configured (not a secret) via the `RATE_LIMITER` binding in `workers/wrangler.toml`.
 
 ---
 
 ## Deployment
 
-Frontend deploys automatically to GitHub Pages on every push to `main` via GitHub Actions.
+Frontend deploys automatically to GitHub Pages on every push to `main` via GitHub Actions (`VITE_*` vars injected from repo secrets at build time).
 
-Workers deploy via:
+Workers deploy manually — this is also what activates any `wrangler.toml` change, including the rate-limit binding:
 ```bash
 cd workers && npx wrangler deploy
 ```
@@ -108,7 +119,7 @@ cd workers && npx wrangler deploy
 
 ## Project Background
 
-Hearsay grew out of research into AI bias and information diversity — the observation that the source you use shapes the answer you get, often invisibly. This applies to search engines, review platforms, and AI systems alike. By aggregating across sources and surfacing divergences explicitly, Hearsay makes that bias visible rather than hidden.
+Hearsay grew out of research into AI bias and information diversity — the observation that the source you use shapes the answer you get, often invisibly. This applies to search engines, review platforms, and AI systems alike. By aggregating across sources and surfacing divergences explicitly — *algorithmically, without an AI deciding for you* — Hearsay makes that bias visible rather than hidden.
 
 Built by [Parisa Singh](https://github.com/parisa-singh), CS + Business, UMass Amherst.
 
