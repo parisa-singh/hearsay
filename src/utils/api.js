@@ -29,28 +29,3 @@ export async function fetchPlatform(endpoint, params = {}) {
     throw err
   }
 }
-
-/**
- * POST to the synthesis endpoint.
- * @param {object} body
- */
-export async function postSynthesis(body) {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 30000) // Claude can take longer
-
-  try {
-    const res = await fetch(`${API_BASE}/synthesize`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    })
-    clearTimeout(timeout)
-    if (!res.ok) throw new Error(`Synthesis failed: ${res.status}`)
-    return await res.json()
-  } catch (err) {
-    clearTimeout(timeout)
-    if (err.name === 'AbortError') throw new Error('Synthesis timed out')
-    throw err
-  }
-}
